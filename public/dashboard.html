@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CdelU</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+        }
+        .nav-link {
+            color: rgba(255,255,255,.75);
+        }
+        .nav-link:hover {
+            color: rgba(255,255,255,1);
+        }
+        .nav-link.active {
+            color: #fff;
+            background-color: rgba(255,255,255,.1);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error-message {
+            display: none;
+            color: #dc3545;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0 sidebar">
+                <div class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white">
+                    <h4 class="my-3">CdelU Admin</h4>
+                    <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start" id="menu">
+                        <li class="nav-item">
+                            <a href="#noticias" class="nav-link align-middle px-0 active">
+                                <i class="bi bi-newspaper"></i> <span class="ms-1 d-none d-sm-inline">Noticias</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#usuarios" class="nav-link align-middle px-0">
+                                <i class="bi bi-people"></i> <span class="ms-1 d-none d-sm-inline">Usuarios</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#estadisticas" class="nav-link align-middle px-0">
+                                <i class="bi bi-graph-up"></i> <span class="ms-1 d-none d-sm-inline">Estadísticas</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="col-md-9 col-lg-10 px-4 py-3">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaNoticiaModal">
+                            <i class="bi bi-plus-lg"></i> Nueva Noticia
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mensajes de error -->
+                <div id="errorMessage" class="error-message"></div>
+
+                <!-- Loading -->
+                <div id="loading" class="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando datos...</p>
+                </div>
+
+                <!-- Noticias -->
+                <div id="noticias" class="tab-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Autor</th>
+                                    <th>Fecha</th>
+                                    <th>Likes</th>
+                                    <th>Comentarios</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="noticiasTableBody">
+                                <!-- Las noticias se cargarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Usuarios -->
+                <div id="usuarios" class="tab-content d-none">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Rol</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usuariosTableBody">
+                                <!-- Los usuarios se cargarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Estadísticas -->
+                <div id="estadisticas" class="tab-content d-none">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Noticias</h5>
+                                    <p class="card-text display-4" id="totalNoticias">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Usuarios</h5>
+                                    <p class="card-text display-4" id="totalUsuarios">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Comentarios</h5>
+                                    <p class="card-text display-4" id="totalComentarios">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Noticia -->
+    <div class="modal fade" id="nuevaNoticiaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Noticia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="nuevaNoticiaForm">
+                        <div class="mb-3">
+                            <label class="form-label">Título</label>
+                            <input type="text" class="form-control" name="titulo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" name="descripcion" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">URL de la Imagen</label>
+                            <input type="url" class="form-control" name="image_url">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">URL Original</label>
+                            <input type="url" class="form-control" name="original_url">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_oficial" checked>
+                            <label class="form-check-label">Noticia Oficial</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="guardarNoticia">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:3001/api/v1';
+        let token = localStorage.getItem('token');
+
+        // Función para mostrar mensajes de error
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Función para mostrar/ocultar loading
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Función para verificar autenticación
+        async function checkAuth() {
+            if (!token) {
+                window.location.href = '/login.html';
+                return false;
+            }
+            return true;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!await checkAuth()) return;
+
+            // Cargar datos iniciales
+            await cargarNoticias();
+            await cargarUsuarios();
+            await cargarEstadisticas();
+
+            // Manejar navegación
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = this.getAttribute('href').substring(1);
+                    
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.add('d-none');
+                    });
+                    document.getElementById(target).classList.remove('d-none');
+                });
+            });
+
+            // Manejar formulario de nueva noticia
+            document.getElementById('guardarNoticia').addEventListener('click', async function() {
+                const form = document.getElementById('nuevaNoticiaForm');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                try {
+                    toggleLoading(true);
+                    const response = await fetch(`${API_BASE_URL}/news`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error al crear la noticia');
+                    }
+
+                    // Cerrar modal y recargar datos
+                    bootstrap.Modal.getInstance(document.getElementById('nuevaNoticiaModal')).hide();
+                    form.reset();
+                    await cargarNoticias();
+                } catch (error) {
+                    showError(error.message);
+                } finally {
+                    toggleLoading(false);
+                }
+            });
+        });
+
+        async function cargarNoticias() {
+            try {
+                toggleLoading(true);
+                const response = await fetch(`${API_BASE_URL}/news`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar noticias');
+                }
+
+                const data = await response.json();
+                const tbody = document.getElementById('noticiasTableBody');
+                tbody.innerHTML = '';
+                
+                data.forEach(noticia => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${noticia.titulo}</td>
+                        <td>${noticia.autor || 'Anónimo'}</td>
+                        <td>${new Date(noticia.created_at).toLocaleDateString()}</td>
+                        <td>${noticia.likes_count || 0}</td>
+                        <td>${noticia.comments_count || 0}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editarNoticia(${noticia.id})">Editar</button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarNoticia(${noticia.id})">Eliminar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                showError('Error al cargar noticias: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function cargarUsuarios() {
+            try {
+                toggleLoading(true);
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar usuarios');
+                }
+
+                const data = await response.json();
+                const tbody = document.getElementById('usuariosTableBody');
+                tbody.innerHTML = '';
+                
+                data.forEach(usuario => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${usuario.nombre}</td>
+                        <td>${usuario.email}</td>
+                        <td>${usuario.role}</td>
+                        <td>${new Date(usuario.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editarUsuario(${usuario.id})">Editar</button>
+                            <button class="btn btn-sm btn-danger" onclick="eliminarUsuario(${usuario.id})">Eliminar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                showError('Error al cargar usuarios: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function cargarEstadisticas() {
+            try {
+                toggleLoading(true);
+                const response = await fetch(`${API_BASE_URL}/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar estadísticas');
+                }
+
+                const data = await response.json();
+                document.getElementById('totalNoticias').textContent = data.totalNoticias || 0;
+                document.getElementById('totalUsuarios').textContent = data.totalUsuarios || 0;
+                document.getElementById('totalComentarios').textContent = data.totalComentarios || 0;
+            } catch (error) {
+                showError('Error al cargar estadísticas: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function eliminarNoticia(id) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta noticia?')) return;
+
+            try {
+                toggleLoading(true);
+                const response = await fetch(`${API_BASE_URL}/news/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al eliminar la noticia');
+                }
+
+                await cargarNoticias();
+            } catch (error) {
+                showError('Error al eliminar noticia: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function editarNoticia(id) {
+            // Implementar edición de noticia
+            alert('Función de edición en desarrollo');
+        }
+
+        async function eliminarUsuario(id) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) return;
+
+            try {
+                toggleLoading(true);
+                const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al eliminar el usuario');
+                }
+
+                await cargarUsuarios();
+            } catch (error) {
+                showError('Error al eliminar usuario: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function editarUsuario(id) {
+            // Implementar edición de usuario
+            alert('Función de edición en desarrollo');
+        }
+    </script>
+</body>
+</html> 
