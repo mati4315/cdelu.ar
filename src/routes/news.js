@@ -44,8 +44,8 @@ async function newsRoutes(fastify, options) {
         properties: {
           titulo: { type: 'string', minLength: 1 },
           descripcion: { type: 'string', minLength: 1 },
-          image_url: { type: 'string', format: 'uri' },
-          original_url: { type: 'string', format: 'uri' },
+          image_url: { type: 'string', format: 'uri', nullable: true },
+          original_url: { type: 'string', format: 'uri', nullable: true },
           is_oficial: { type: 'boolean', default: true }
         }
       }
@@ -68,8 +68,8 @@ async function newsRoutes(fastify, options) {
         properties: {
           titulo: { type: 'string', minLength: 1 },
           descripcion: { type: 'string', minLength: 1 },
-          image_url: { type: 'string', format: 'uri' },
-          original_url: { type: 'string', format: 'uri' },
+          image_url: { type: 'string', format: 'uri', nullable: true },
+          original_url: { type: 'string', format: 'uri', nullable: true },
           is_oficial: { type: 'boolean' }
         }
       }

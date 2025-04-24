@@ -60,6 +60,26 @@ fastify.register(newsRoutes);
 fastify.register(userRoutes);
 fastify.register(statsRoutes);
 
+fastify.addHook('onRequest', async (request, reply) => {
+    // Excluir rutas públicas (login, register, health) de la autenticación
+    if (
+        request.url.startsWith('/api/v1/auth/') ||
+        request.url === '/health' ||
+        request.url.startsWith('/public/') ||
+        request.url === '/favicon.ico'
+    ) {
+        return;
+    }
+    
+    // Aplicar autenticación a las demás rutas
+    try {
+        await request.jwtVerify();
+        request.user = request.user; // Asegurarse de que request.user esté poblado
+    } catch (err) {
+        reply.code(401).send({ error: 'No autorizado o token inválido' });
+    }
+});
+
 // Ruta protegida para el dashboard
 fastify.get('/dashboard', {
   onRequest: [authenticate, authorize(['administrador'])]
@@ -77,6 +97,11 @@ fastify.get('/dashboard.html', {
 // Ruta de health check
 fastify.get('/health', async (request, reply) => {
   return { status: 'OK' };
+});
+
+// Ruta para favicon (evita 404 en logs)
+fastify.get('/favicon.ico', async (request, reply) => {
+  return reply.code(204).send();
 });
 
 // Manejador de errores global

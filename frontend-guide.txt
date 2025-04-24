@@ -1,0 +1,87 @@
+Guía para Cursor: Desarrollo del Frontend para CdelU Admin
+
+1. Contexto del Proyecto
+   - Aplicación de administración de noticias y usuarios para el sitio CdelU.
+   - Backend: Fastify + TypeScript con API REST versionada (/api/v1/*).
+   - Autenticación basada en JWT almacenado en localStorage.
+
+2. Stack Tecnológico
+   - Framework: React 18 + Vite (o Create React App con TypeScript).
+   - Lenguaje: TypeScript (estricto, sin any, DTOs o Zod para validación).
+   - Enrutamiento: React Router v6.
+   - Peticiones HTTP: Axios o fetch con interceptores para agregar token.
+   - Estado global: Context API o Zustand para manejo de Auth y configuración global.
+   - Estilos: Tailwind CSS (configurado con dark/light mode) o Bootstrap 5 con CSS Modules.
+   - UI Icons: Bootstrap Icons o React Icons.
+
+3. Variables de Entorno
+   - VITE_API_BASE_URL: http://localhost:3001/api/v1
+   - VITE_APP_TITLE, VITE_THEME_DEFAULT, etc.
+   - Cargar con dotenv y tipar con Zod.
+
+4. Endpoints Principales
+   - GET /users             → Listado de usuarios
+   - GET /users/:id         → Obtener datos de un usuario
+   - PUT /users/:id         → Actualizar usuario
+   - DELETE /users/:id      → Eliminar usuario
+
+   - GET /news              → Listado paginado y ordenado de noticias
+       • Query: page, limit, sort, order
+   - GET /news/:id          → Detalle de noticia
+   - POST /news             → Crear noticia
+   - PUT /news/:id          → Actualizar noticia
+   - DELETE /news/:id       → Eliminar noticia
+
+   - GET /stats             → Estadísticas (totalNoticias, totalUsuarios, totalComentarios)
+
+   - Rutas de prueba en API Viewer: endpoints dinámicos con token.
+
+5. Funcionalidades Clave
+   a) Login/Logout: redirigir al login si no hay JWT.
+   b) Dashboard principal con pestañas:
+      • Noticias: tabla con ordenación, paginación y acciones (editar, eliminar).
+      • Usuarios: tabla simple con acciones.
+      • Estadísticas: tarjetas responsive.
+      • API Viewer: interfaz para probar endpoints.
+   c) Modal para crear/editar noticias y usuarios.
+   d) Dark/Light Theme con toggle y almacenamiento en localStorage.
+   e) Responsive: Diseño móvil-first, menú 'hamburger' para sidebar.
+
+6. Estructura de Carpetas Sugerida
+   src/
+   ├─ api/                 # Cliente HTTP, interceptor de token, métodos CRUD
+   ├─ components/          # Componentes reutilizables (Table, Modal, Button)
+   ├─ contexts/            # Contexto de Auth, Theme, Layout
+   ├─ hooks/               # Hooks personalizados (useFetch, usePagination)
+   ├─ layouts/             # Layout general con Sidebar y Header
+   ├─ pages/               # Páginas: Noticias, Usuarios, Estadísticas, APIViewer, Login
+   ├─ routes/              # Definición de rutas de React Router
+   ├─ styles/              # Tailwind config o CSS modules
+   ├─ utils/               # Helpers: date formatting, valida URL, mostrar errores
+   ├─ types/               # Interfaces y tipos globales (User, News, Stats)
+   ├─ App.tsx              # Componente raíz
+   └─ main.tsx             # Punto de entrada
+
+7. Requisitos de UX/UI
+   - Sidebar colapsable en móvil.
+   - Tablas con scroll horizontal en pantallas pequeñas o conversión a tarjetas.
+   - Botones suficientemente grandes para touch.
+   - Indicadores de carga y mensajes de error claros.
+   - Validación de formularios con mensajes inline.
+
+8. Testing
+   - Unit tests con Jest + React Testing Library.
+   - Pruebas de integración de componentes críticos (Login, Table, Modal).
+   - Mock de Axios para simular respuestas del API.
+
+9. CI/CD y Lint
+   - Pre-configurar ESLint + Prettier.
+   - Git hooks con Husky (pre-commit para lint y tests).
+   - Pipeline en GitHub Actions: install, lint, test, build.
+
+10. Documentación
+   - README.md con pasos de inicio, variables de entorno y scripts.
+   - Documentar cada componente público con JSDoc (en TS).
+
+---
+Esta guía agrupa todo el contexto, requisitos y estructura para que Cursor pueda generar el frontend completo de CdelU Admin de forma consistente y siguiendo las mejores prácticas. 

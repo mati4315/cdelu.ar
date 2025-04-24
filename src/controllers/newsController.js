@@ -131,12 +131,21 @@ async function updateNews(request, reply) {
   try {
     const { id } = request.params;
     const { titulo, descripcion, image_url, original_url, is_oficial } = request.body;
+    const userRole = request.user?.role;
+    const userId = request.user?.id;
 
-    // Verificar si la noticia existe y pertenece al usuario
-    const [existingNews] = await pool.query(
-      'SELECT * FROM news WHERE id = ? AND created_by = ?',
-      [id, request.user.id]
-    );
+    // Construir la consulta según el rol del usuario
+    let query = 'SELECT * FROM news WHERE id = ?';
+    const queryParams = [id];
+    
+    // Si no es admin, solo puede editar sus propias noticias
+    if (userRole !== 'administrador') {
+        query += ' AND created_by = ?';
+        queryParams.push(userId);
+    }
+    
+    // Verificar si la noticia existe y el usuario tiene permisos
+    const [existingNews] = await pool.query(query, queryParams);
 
     if (existingNews.length === 0) {
       return reply.status(404).send({ error: 'Noticia no encontrada' });
@@ -186,12 +195,19 @@ async function updateNews(request, reply) {
 async function deleteNews(request, reply) {
   try {
     const { id } = request.params;
-    const userId = request.user?.id; // Asumiendo que tenemos autenticación
+    const userRole = request.user?.role;
+    const userId = request.user?.id;
 
-    const [result] = await pool.query(
-      'DELETE FROM news WHERE id = ? AND created_by = ?',
-      [id, userId]
-    );
+    let query = 'DELETE FROM news WHERE id = ?';
+    const queryParams = [id];
+
+    // Si no es admin, solo puede borrar sus propias noticias
+    if (userRole !== 'administrador') {
+        query += ' AND created_by = ?';
+        queryParams.push(userId);
+    }
+
+    const [result] = await pool.query(query, queryParams);
 
     if (result.affectedRows === 0) {
       return reply.status(404).send({ error: 'Noticia no encontrada o no autorizado' });
