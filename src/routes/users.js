@@ -1,4 +1,4 @@
-const { authenticate } = require('../middlewares/auth');
+const { authenticate, authorize } = require('../middlewares/auth');
 const pool = require('../config/database');
 
 /**
@@ -7,7 +7,56 @@ const pool = require('../config/database');
  * @param {Object} options - Opciones de configuración
  */
 async function userRoutes(fastify, options) {
-  // Obtener perfil del usuario autenticado
+  // Obtener todos los usuarios (solo admin)
+  fastify.get('/api/v1/users', {
+    onRequest: [authenticate, authorize(['administrador'])],
+    schema: {
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  nombre: { type: 'string' },
+                  email: { type: 'string' },
+                  role: { type: 'string' },
+                  created_at: { type: 'string', format: 'date-time' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const [users] = await pool.query(
+        `SELECT u.*, r.nombre as role 
+         FROM users u 
+         JOIN roles r ON u.role_id = r.id`
+      );
+
+      // No enviar información sensible
+      const sanitizedUsers = users.map(user => ({
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at
+      }));
+
+      return reply.send({ data: sanitizedUsers });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Error al obtener usuarios' });
+    }
+  });
+
+  // Obtener perfil del usuario actual
   fastify.get('/api/v1/users/profile', {
     onRequest: [authenticate],
     schema: {
@@ -19,22 +68,19 @@ async function userRoutes(fastify, options) {
             nombre: { type: 'string' },
             email: { type: 'string' },
             role: { type: 'string' },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' }
+            created_at: { type: 'string', format: 'date-time' }
           }
         }
       }
     }
   }, async (request, reply) => {
     try {
-      const userId = request.user.id;
-      
       const [users] = await pool.query(
         `SELECT u.*, r.nombre as role 
          FROM users u 
          JOIN roles r ON u.role_id = r.id 
          WHERE u.id = ?`,
-        [userId]
+        [request.user.id]
       );
 
       if (users.length === 0) {
@@ -42,13 +88,16 @@ async function userRoutes(fastify, options) {
       }
 
       const user = users[0];
-      delete user.password; // No enviar la contraseña
-      delete user.role_id; // No enviar el ID del rol
-
-      reply.send(user);
+      return reply.send({
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at
+      });
     } catch (error) {
       request.log.error(error);
-      reply.status(500).send({ error: 'Error al obtener el perfil' });
+      return reply.status(500).send({ error: 'Error al obtener el perfil' });
     }
   });
 }

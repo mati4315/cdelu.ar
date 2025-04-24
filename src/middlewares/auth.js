@@ -5,9 +5,10 @@
  */
 async function authenticate(request, reply) {
   try {
-    await request.jwtVerify();
+    const decoded = await request.jwtVerify();
+    request.user = decoded;
   } catch (err) {
-    reply.status(401).send({ error: 'No autorizado' });
+    return reply.status(401).send({ error: 'No autorizado' });
   }
 }
 
@@ -18,11 +19,15 @@ async function authenticate(request, reply) {
 function authorize(roles) {
   return async (request, reply) => {
     try {
+      if (!request.user || !request.user.role) {
+        return reply.status(401).send({ error: 'No autorizado' });
+      }
+
       if (!roles.includes(request.user.role)) {
         return reply.status(403).send({ error: 'No tienes permiso para realizar esta acción' });
       }
     } catch (err) {
-      reply.status(401).send({ error: 'No autorizado' });
+      return reply.status(401).send({ error: 'No autorizado' });
     }
   };
 }

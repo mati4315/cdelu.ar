@@ -1,3 +1,7 @@
+Crear noticias
+
+npm run import-news
+
 1. Estructura de carpetas
 Cdelu.ar/
 ├── src/

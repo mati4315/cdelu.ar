@@ -99,7 +99,8 @@ async function login(request, reply) {
       role: user.role
     });
 
-    reply.send({
+    // Enviar respuesta con token y datos del usuario
+    return reply.send({
       token,
       user: {
         id: user.id,
@@ -110,7 +111,7 @@ async function login(request, reply) {
     });
   } catch (error) {
     request.log.error(error);
-    reply.status(500).send({ error: 'Error al iniciar sesión' });
+    return reply.status(500).send({ error: 'Error al iniciar sesión' });
   }
 }
 

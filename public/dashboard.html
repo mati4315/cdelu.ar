@@ -160,34 +160,34 @@
     </div>
 
     <!-- Modal Nueva Noticia -->
-    <div class="modal fade" id="nuevaNoticiaModal" tabindex="-1">
-        <div class="modal-dialog">
+    <div class="modal fade" id="nuevaNoticiaModal" tabindex="-1" role="dialog" aria-labelledby="nuevaNoticiaModalLabel">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Nueva Noticia</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="nuevaNoticiaModalLabel">Nueva Noticia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <form id="nuevaNoticiaForm">
                         <div class="mb-3">
-                            <label class="form-label">Título</label>
-                            <input type="text" class="form-control" name="titulo" required>
+                            <label for="titulo" class="form-label">Título</label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Descripción</label>
-                            <textarea class="form-control" name="descripcion" rows="4" required></textarea>
+                            <label for="descripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="4" required></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">URL de la Imagen</label>
-                            <input type="url" class="form-control" name="image_url">
+                            <label for="image_url" class="form-label">URL de la Imagen</label>
+                            <input type="url" class="form-control" id="image_url" name="image_url">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">URL Original</label>
-                            <input type="url" class="form-control" name="original_url">
+                            <label for="original_url" class="form-label">URL Original</label>
+                            <input type="url" class="form-control" id="original_url" name="original_url">
                         </div>
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" name="is_oficial" checked>
-                            <label class="form-check-label">Noticia Oficial</label>
+                            <input type="checkbox" class="form-check-input" id="is_oficial" name="is_oficial" checked>
+                            <label class="form-check-label" for="is_oficial">Noticia Oficial</label>
                         </div>
                     </form>
                 </div>
@@ -203,6 +203,7 @@
     <script>
         const API_BASE_URL = 'http://localhost:3001/api/v1';
         let token = localStorage.getItem('token');
+        let modalInstance; // Variable global para la instancia del modal
 
         // Función para mostrar mensajes de error
         function showError(message) {
@@ -222,7 +223,7 @@
         // Función para verificar autenticación
         async function checkAuth() {
             if (!token) {
-                window.location.href = '/login.html';
+                window.location.href = '/public/login.html';
                 return false;
             }
             return true;
@@ -235,6 +236,75 @@
             await cargarNoticias();
             await cargarUsuarios();
             await cargarEstadisticas();
+
+            // Configurar el modal para manejar el foco
+            const modal = document.getElementById('nuevaNoticiaForm');
+            const modalInstance = new bootstrap.Modal(document.getElementById('nuevaNoticiaModal'));
+
+            // Manejar formulario de nueva noticia
+            document.getElementById('guardarNoticia').addEventListener('click', async function() {
+                const form = document.getElementById('nuevaNoticiaForm');
+                const formData = new FormData(form);
+                
+                // Validar campos requeridos
+                const titulo = formData.get('titulo')?.trim();
+                const descripcion = formData.get('descripcion')?.trim();
+                
+                if (!titulo || !descripcion) {
+                    showError('El título y la descripción son campos requeridos');
+                    return;
+                }
+                
+                // Validar y formatear las URLs
+                const imageUrl = formData.get('image_url')?.trim() || null;
+                const originalUrl = formData.get('original_url')?.trim() || null;
+                
+                const data = {
+                    titulo: titulo,
+                    descripcion: descripcion,
+                    image_url: imageUrl || null,
+                    original_url: originalUrl || null,
+                    is_oficial: formData.get('is_oficial') === 'on'
+                };
+                
+                console.log('Datos a enviar:', data);
+                
+                try {
+                    toggleLoading(true);
+                    const response = await fetch(`${API_BASE_URL}/news`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const responseData = await response.json();
+                    console.log('Respuesta del servidor:', responseData);
+
+                    if (!response.ok) {
+                        throw new Error(responseData.error || 'Error al crear la noticia');
+                    }
+
+                    // Cerrar modal y recargar datos
+                    modalInstance.hide();
+                    form.reset();
+                    await cargarNoticias();
+                } catch (error) {
+                    console.error('Error al crear noticia:', error);
+                    showError(error.message);
+                } finally {
+                    toggleLoading(false);
+                }
+            });
+
+            // Restaurar el comportamiento original del botón guardar cuando se cierra el modal
+            document.getElementById('nuevaNoticiaModal').addEventListener('hidden.bs.modal', function () {
+                document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Nueva Noticia';
+                const form = document.getElementById('nuevaNoticiaForm');
+                form.reset();
+            });
 
             // Manejar navegación
             document.querySelectorAll('.nav-link').forEach(link => {
@@ -252,35 +322,26 @@
                 });
             });
 
-            // Manejar formulario de nueva noticia
-            document.getElementById('guardarNoticia').addEventListener('click', async function() {
-                const form = document.getElementById('nuevaNoticiaForm');
-                const formData = new FormData(form);
-                const data = Object.fromEntries(formData.entries());
-                
-                try {
-                    toggleLoading(true);
-                    const response = await fetch(`${API_BASE_URL}/news`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(data)
-                    });
+            // Agregar manejadores de eventos para los botones de acción
+            document.getElementById('noticiasTableBody').addEventListener('click', function(e) {
+                const target = e.target;
+                if (target.matches('.btn-primary')) {
+                    const id = target.getAttribute('data-id');
+                    editarNoticia(id);
+                } else if (target.matches('.btn-danger')) {
+                    const id = target.getAttribute('data-id');
+                    eliminarNoticia(id);
+                }
+            });
 
-                    if (!response.ok) {
-                        throw new Error('Error al crear la noticia');
-                    }
-
-                    // Cerrar modal y recargar datos
-                    bootstrap.Modal.getInstance(document.getElementById('nuevaNoticiaModal')).hide();
-                    form.reset();
-                    await cargarNoticias();
-                } catch (error) {
-                    showError(error.message);
-                } finally {
-                    toggleLoading(false);
+            document.getElementById('usuariosTableBody').addEventListener('click', function(e) {
+                const target = e.target;
+                if (target.matches('.btn-primary')) {
+                    const id = target.getAttribute('data-id');
+                    editarUsuario(id);
+                } else if (target.matches('.btn-danger')) {
+                    const id = target.getAttribute('data-id');
+                    eliminarUsuario(id);
                 }
             });
         });
@@ -298,11 +359,12 @@
                     throw new Error('Error al cargar noticias');
                 }
 
-                const data = await response.json();
+                const responseData = await response.json();
+                const noticias = responseData.data;
                 const tbody = document.getElementById('noticiasTableBody');
                 tbody.innerHTML = '';
                 
-                data.forEach(noticia => {
+                noticias.forEach(noticia => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${noticia.titulo}</td>
@@ -311,8 +373,8 @@
                         <td>${noticia.likes_count || 0}</td>
                         <td>${noticia.comments_count || 0}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="editarNoticia(${noticia.id})">Editar</button>
-                            <button class="btn btn-sm btn-danger" onclick="eliminarNoticia(${noticia.id})">Eliminar</button>
+                            <button class="btn btn-sm btn-primary" data-id="${noticia.id}">Editar</button>
+                            <button class="btn btn-sm btn-danger" data-id="${noticia.id}">Eliminar</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -337,11 +399,12 @@
                     throw new Error('Error al cargar usuarios');
                 }
 
-                const data = await response.json();
+                const responseData = await response.json();
+                const usuarios = responseData.data;
                 const tbody = document.getElementById('usuariosTableBody');
                 tbody.innerHTML = '';
                 
-                data.forEach(usuario => {
+                usuarios.forEach(usuario => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${usuario.nombre}</td>
@@ -349,8 +412,8 @@
                         <td>${usuario.role}</td>
                         <td>${new Date(usuario.created_at).toLocaleDateString()}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="editarUsuario(${usuario.id})">Editar</button>
-                            <button class="btn btn-sm btn-danger" onclick="eliminarUsuario(${usuario.id})">Eliminar</button>
+                            <button class="btn btn-sm btn-primary" data-id="${usuario.id}">Editar</button>
+                            <button class="btn btn-sm btn-danger" data-id="${usuario.id}">Eliminar</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -411,8 +474,180 @@
         }
 
         async function editarNoticia(id) {
-            // Implementar edición de noticia
-            alert('Función de edición en desarrollo');
+            try {
+                console.log('Iniciando edición de noticia con ID:', id);
+                toggleLoading(true);
+                
+                // Obtener los datos actuales de la noticia
+                const response = await fetch(`${API_BASE_URL}/news/${id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al obtener los datos de la noticia');
+                }
+
+                const responseData = await response.json();
+                console.log('Datos de la noticia recibidos:', responseData);
+                
+                const noticia = responseData.data;
+                
+                // Llenar el formulario con los datos actuales
+                const form = document.getElementById('nuevaNoticiaForm');
+                form.elements['titulo'].value = noticia.titulo;
+                form.elements['descripcion'].value = noticia.descripcion;
+                form.elements['image_url'].value = noticia.image_url || '';
+                form.elements['original_url'].value = noticia.original_url || '';
+                form.elements['is_oficial'].checked = noticia.is_oficial === 1;
+
+                // Cambiar el título del modal
+                document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Editar Noticia';
+                
+                // Cambiar el comportamiento del botón guardar
+                const guardarBtn = document.getElementById('guardarNoticia');
+                guardarBtn.onclick = async function() {
+                    const formData = new FormData(form);
+                    const data = {
+                        titulo: formData.get('titulo')?.trim(),
+                        descripcion: formData.get('descripcion')?.trim(),
+                        image_url: formData.get('image_url')?.trim() || null,
+                        original_url: formData.get('original_url')?.trim() || null,
+                        is_oficial: formData.get('is_oficial') === 'on'
+                    };
+                    
+                    console.log('Datos a actualizar:', data);
+                    
+                    try {
+                        toggleLoading(true);
+                        const updateResponse = await fetch(`${API_BASE_URL}/news/${id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        const updateData = await updateResponse.json();
+                        console.log('Respuesta de actualización:', updateData);
+
+                        if (!updateResponse.ok) {
+                            throw new Error(updateData.error || 'Error al actualizar la noticia');
+                        }
+
+                        // Cerrar modal y recargar datos
+                        modalInstance.hide();
+                        form.reset();
+                        await cargarNoticias();
+                    } catch (error) {
+                        console.error('Error al actualizar noticia:', error);
+                        showError(error.message);
+                    } finally {
+                        toggleLoading(false);
+                    }
+                };
+
+                // Mostrar el modal
+                modalInstance.show();
+            } catch (error) {
+                console.error('Error en editarNoticia:', error);
+                showError('Error al editar noticia: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function editarUsuario(id) {
+            try {
+                console.log('Iniciando edición de usuario con ID:', id);
+                toggleLoading(true);
+                // Obtener los datos actuales del usuario
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al obtener datos de usuarios');
+                }
+
+                const responseData = await response.json();
+                console.log('Datos de usuarios recibidos:', responseData);
+                const usuarios = responseData.data;
+                const usuario = usuarios.find(u => u.id === parseInt(id));
+                
+                if (!usuario) {
+                    throw new Error('Usuario no encontrado');
+                }
+
+                console.log('Usuario encontrado:', usuario);
+
+                // Llenar el formulario con los datos actuales
+                const form = document.getElementById('nuevaNoticiaForm');
+                form.elements['titulo'].value = usuario.nombre;
+                form.elements['descripcion'].value = usuario.email;
+                form.elements['image_url'].value = '';
+                form.elements['original_url'].value = '';
+                form.elements['is_oficial'].checked = usuario.role === 'admin';
+
+                // Cambiar el título del modal
+                document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Editar Usuario';
+                
+                // Cambiar el comportamiento del botón guardar
+                const guardarBtn = document.getElementById('guardarNoticia');
+                guardarBtn.onclick = async function() {
+                    const formData = new FormData(form);
+                    const data = Object.fromEntries(formData.entries());
+                    const updateData = {
+                        nombre: data.titulo,
+                        email: data.descripcion,
+                        role: data.is_oficial === 'on' ? 'admin' : 'user'
+                    };
+                    
+                    console.log('Datos a actualizar:', updateData);
+                    
+                    try {
+                        toggleLoading(true);
+                        const updateResponse = await fetch(`${API_BASE_URL}/users/${id}/update`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(updateData)
+                        });
+
+                        console.log('Respuesta de actualización:', updateResponse);
+
+                        if (!updateResponse.ok) {
+                            const errorData = await updateResponse.json();
+                            console.error('Error en la respuesta:', errorData);
+                            throw new Error(errorData.error || 'Error al actualizar el usuario');
+                        }
+
+                        // Cerrar modal y recargar datos
+                        modalInstance.hide();
+                        form.reset();
+                        await cargarUsuarios();
+                    } catch (error) {
+                        console.error('Error al actualizar usuario:', error);
+                        showError(error.message);
+                    } finally {
+                        toggleLoading(false);
+                    }
+                };
+
+                // Mostrar el modal
+                modalInstance.show();
+            } catch (error) {
+                console.error('Error en editarUsuario:', error);
+                showError('Error al editar usuario: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
         }
 
         async function eliminarUsuario(id) {
@@ -439,9 +674,14 @@
             }
         }
 
-        async function editarUsuario(id) {
-            // Implementar edición de usuario
-            alert('Función de edición en desarrollo');
+        // Función auxiliar para validar URLs
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
         }
     </script>
 </body>

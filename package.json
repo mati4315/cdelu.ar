@@ -1,17 +1,14 @@
 {
-  "name": "cdelu-api",
-  "version": "0.1.0",
-  "description": "API REST para diario online con Fastify y MySQL",
+  "name": "cdelu",
+  "version": "1.0.0",
+  "description": "API REST para un diario online con Fastify y MySQL",
   "main": "src/index.js",
   "scripts": {
+    "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest --coverage",
-    "test:step1": "jest tests/step1.spec.js",
-    "test:step2": "jest tests/step2.spec.js",
-    "test:step3": "jest tests/step3.spec.js",
-    "test:step4": "jest tests/step4.spec.js",
-    "test:step5": "jest tests/step5.spec.js",
-    "init-db": "node scripts/init-db.js"
+    "test": "jest",
+    "import-news": "node src/scripts/import-latest-news.js",
+    "delete-news": "node src/scripts/delete-all-news.js"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.1",
