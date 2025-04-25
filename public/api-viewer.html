@@ -265,6 +265,7 @@
     </style>
 </head>
 <body>
+    <script src="config.js"></script>
     <div class="container">
         <div class="header">
             <h1>CdelU API Viewer</h1>
@@ -448,7 +449,7 @@
                     }
                 }
                 
-                const response = await fetch(`http://localhost:3001${endpoint}`, options);
+                const response = await fetch(`${window.__env.API_BASE_URL}${endpoint}`, options);
                 const endTime = performance.now();
                 
                 const responseTimeMs = Math.round(endTime - startTime);

@@ -15,5 +15,7 @@ module.exports = {
   },
   rss: {
     feedUrl: process.env.RSS_FEED_URL || 'https://lapiramide.net/feed'
-  }
+  },
+  // Orígenes permitidos para CORS (para helmet CSP y cors plugin)
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001'
 }; 

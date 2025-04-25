@@ -8,7 +8,9 @@ const statsRoutes = require('./routes/stats');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
-fastify.register(require('@fastify/cors'));
+fastify.register(require('@fastify/cors'), {
+  origin: config.corsOrigin
+});
 fastify.register(require('@fastify/helmet'), {
   contentSecurityPolicy: {
     directives: {
@@ -16,7 +18,7 @@ fastify.register(require('@fastify/helmet'), {
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "http://localhost:3001"],
+      connectSrc: ["'self'", config.corsOrigin],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net"]
     }
   }
@@ -40,7 +42,6 @@ fastify.register(require('@fastify/swagger'), {
       description: 'API para el diario online CdelU',
       version: '1.0.0'
     },
-    host: `localhost:${config.port}`,
     schemes: ['http'],
     consumes: ['application/json'],
     produces: ['application/json'],
