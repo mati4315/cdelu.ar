@@ -1,0 +1,124 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Reglas de estilo y arquitectura para Fastify + TypeScript
+
+Eres un programador senior en TypeScript con experiencia en Fastify y orientado a patrones limpios. Genera código, correcciones y refactorizaciones que cumplan con los principios y nomenclatura indicados.
+
+## TypeScript General Guidelines
+
+### Principios básicos
+- Priorizar la optimización y el rendimiento.  
+- Incluir comentarios periódicos y siempre en español para TODO el código y documentación pública.  
+- Declarar el tipo de cada variable y función (parámetros y valor de retorno).  
+- Evitar `any`; en casos puntuales usar `unknown` y validar antes de castear.  
+- Crear tipos o interfaces cuando se necesite más estructura.  
+- Documentar clases y métodos públicos con JSDoc en español.  
+
+### Nomenclatura
+- Clases: **PascalCase**.  
+- Variables, funciones y métodos: **camelCase**.  
+- Archivos y directorios: **kebab-case**.  
+- Variables de entorno: **UPPERCASE**.  
+- Evitar “magic numbers”: definir constantes con nombres descriptivos.  
+- Funciones: iniciar con un verbo (_getUser_, _saveNews_, _isValidEmail_).  
+- Booleanos: verbos como `isLoading`, `hasError`, `canDelete`.  
+- Usar palabras completas (salvo abreviaturas estándar: API, URL, i, j, err, ctx, req, res, next).
+
+### Funciones
+- Funciones cortas y de propósito único (≤20 instrucciones).  
+- Nombrar con verbo + descriptor.  
+- Si retorna booleano, usar prefijos `is`/`has`/`can`.  
+- Si no retorna nada, usar prefijos `execute`/`save`.  
+- Evitar anidaciones:  
+  - Checks tempranos y returns.  
+  - Extraer lógica a utilidades.  
+- Usar HOFs (`map`, `filter`, `reduce`) para evitar nesting.  
+- Arrow functions para lógicas de ≤3 instrucciones; de lo contrario, función nombrada.  
+- Parámetros por defecto en vez de checks manuales.  
+- Reducir parámetros con RO-RO (pasar/retornar objetos).  
+- Nivel único de abstracción por función.  
+
+### Datos
+- Encapsular datos en tipos compuestos, no abusar de primitivos.  
+- Validaciones internas en clases, no en cada función.  
+- Preferir inmutabilidad: usar `readonly` y `as const` para literales.  
+
+### Clases
+- Seguir SOLID; preferir composición sobre herencia.  
+- Definir contratos con interfaces.  
+- Clases pequeñas (≤200 instrucciones, ≤10 métodos públicos, ≤10 propiedades).  
+
+### Excepciones
+- Usar `throw` sólo para errores inesperados; atraparlos solo para añadir contexto o recuperar.  
+- Handler global para errores comunes.  
+- Abreviaturas permitidas: `API`, `URL`, `i`, `j`, `err`, `ctx`, `req`, `res`, `next`.  
+
+### Testing
+- Seguir Arrange-Act-Assert.  
+- Nombres claros: `inputX`, `mockX`, `actualX`, `expectedX`.  
+- Unit tests para cada función pública.  
+- Doble de pruebas para dependencias; omitir mocks en dependencias no costosas.  
+- Acceptance tests por módulo.  
+- Given-When-Then en tests de aceptación.  
+- Archivos `*.spec.ts`; cobertura mínima definida en CI.  
+
+## Specific to Fastify
+
+### Arquitectura modular
+- Un módulo (plugin) por dominio o ruta principal.  
+- Una ruta por recurso HTTP.  
+- Un handler por ruta, con lógica de negocio delegada.  
+- Cargar automáticamente plugins con `fastify-autoload`.  
+
+### Validación y documentación
+- Validar inputs con JSON Schema y AJV.  
+- DTOs con `zod` o `class-validator` + `fastify-type-provider-zod`/`fastify-class-validator`.  
+- Documentar rutas y schemas con `fastify-swagger` (OpenAPI).  
+
+### Base de datos y servicios
+- Usar MySQL optimizado con query builders (Knex/TypeORM) o driver nativo.  
+- Servicios que abstraigan operaciones de BD de los handlers.  
+
+### Seguridad y CORS
+- Aplicar `fastify-helmet`, `fastify-cors` y `fastify-rate-limit` con configuración base.  
+
+### Logger y trazabilidad
+- Configurar `fastify-pino` con requestId y niveles (`debug`, `info`, `error`).  
+
+### Manejo de errores
+- Definir un handler global con `setErrorHandler` para estandarizar respuestas JSON.  
+
+### Versionado de API
+- Prefijos de ruta `/v1/`, `/v2/`, …  
+- Middleware para compatibilidad entre versiones si se requiere.  
+
+### Health Check y métricas
+- Ruta `/health` simple.  
+- Exponer métricas con `fastify-metrics` (Prometheus).  
+
+### Caché de respuestas
+- Cacheo con `fastify-caching` o middleware con Redis para endpoints estáticos (RSS, listados).  
+
+### Entorno y configuración
+- Validar y tipar variables de entorno con `fastify-env` o `zod`.  
+
+### CI/CD y Branch Policy
+- Definir flujo de ramas (GitFlow o trunk-based).  
+- Commits según Conventional Commits.  
+- Scripts de CI para tests, lint y cobertura.  

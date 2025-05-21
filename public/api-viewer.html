@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Viewer - CdelU</title>
+    <style>
+        :root {
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+        }
+        
+        /* Tema Oscuro (default) */
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333;
+            --input-bg: #2a2a2a;
+            --button-bg: #4045db;
+            --button-hover: #3238b0;
+            --button-text: white;
+            --pre-bg: #2a2a2a;
+            --accent-color: #7b68ee;
+            --header-color: #ffffff;
+            --muted-color: #888;
+        }
+        
+        /* Tema Claro */
+        [data-theme="light"] {
+            --bg-color: #f5f5f5;
+            --card-bg-color: white;
+            --text-color: #333;
+            --border-color: #ddd;
+            --input-bg: #f9f9f9;
+            --button-bg: #4045db;
+            --button-hover: #3238b0;
+            --button-text: white;
+            --pre-bg: #f0f0f0;
+            --accent-color: #5045db;
+            --header-color: #333;
+            --muted-color: #666;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            transition: var(--transition);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--card-bg-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        h1, h2, h3 {
+            color: var(--header-color);
+            margin-bottom: 15px;
+        }
+        
+        .theme-switch {
+            display: flex;
+            align-items: center;
+        }
+        
+        .theme-switch-label {
+            margin-right: 10px;
+            font-size: 14px;
+            color: var(--muted-color);
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--input-bg);
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--accent-color);
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--accent-color);
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-family: inherit;
+            transition: var(--transition);
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(123, 104, 238, 0.25);
+        }
+        
+        button {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        
+        button:hover {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        pre {
+            background-color: var(--pre-bg);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            overflow-x: auto;
+            max-height: 500px;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Courier New', monospace;
+            border: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+        
+        .endpoints-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .method-get { background-color: #4CAF50; color: white; }
+        .method-post { background-color: #2196F3; color: white; }
+        .method-put { background-color: #FF9800; color: white; }
+        .method-delete { background-color: #F44336; color: white; }
+        
+        .endpoint-list {
+            list-style-type: none;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-list li {
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+        
+        .request-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .request-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .token-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .refresh-token {
+            width: auto;
+            padding: 12px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .refresh-token svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--muted-color);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <script src="config.js"></script>
+    <div class="container">
+        <div class="header">
+            <h1>CdelU API Viewer</h1>
+            <div class="theme-switch">
+                <span class="theme-switch-label">Tema oscuro</span>
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="token">Token JWT:</label>
+            <div class="token-controls">
+                <input type="text" id="token" placeholder="Token JWT">
+                <button class="refresh-token" id="refreshToken" title="Refrescar token">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="request-section">
+            <div class="form-group">
+                <label for="method">Método HTTP:</label>
+                <select id="method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="endpoint">Endpoint:</label>
+                <select id="endpoint">
+                    <option value="/api/v1/users">GET /api/v1/users</option>
+                    <option value="/api/v1/news">GET /api/v1/news</option>
+                    <option value="/api/v1/stats">GET /api/v1/stats</option>
+                    <option value="/api/v1/users/profile">GET /api/v1/users/profile</option>
+                    <option value="/api/v1/news/1">GET /api/v1/news/1</option>
+                    <option value="/api/v1/news/1/comments">GET /api/v1/news/1/comments</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="customEndpoint">Endpoint Personalizado:</label>
+                <input type="text" id="customEndpoint" placeholder="/api/v1/news/2">
+            </div>
+        </div>
+        
+        <div class="form-group" id="requestBodyContainer" style="display: none;">
+            <label for="requestBody">Cuerpo de la Petición (JSON):</label>
+            <textarea id="requestBody" rows="5">{\n  "titulo": "Título de prueba",\n  "descripcion": "Descripción de prueba"\n}</textarea>
+        </div>
+        
+        <button id="fetchButton">Enviar Petición</button>
+        
+        <div class="status-bar">
+            <span id="requestStatus"></span>
+            <span id="responseTime"></span>
+        </div>
+        
+        <h2>Respuesta:</h2>
+        <pre id="response">Haz clic en "Enviar Petición" para ver los resultados</pre>
+        
+        <div class="endpoints-section">
+            <h3>Endpoints Disponibles:</h3>
+            
+            <h4><span class="method method-get">GET</span> Métodos de consulta</h4>
+            <ul class="endpoint-list">
+                <li>/api/v1/users (Listar usuarios)</li>
+                <li>/api/v1/users/profile (Perfil del usuario actual)</li>
+                <li>/api/v1/news (Listar noticias)</li>
+                <li>/api/v1/news/:id (Obtener noticia por ID)</li>
+                <li>/api/v1/news/:id/comments (Obtener comentarios de una noticia)</li>
+                <li>/api/v1/stats (Estadísticas)</li>
+            </ul>
+            
+            <h4><span class="method method-post">POST</span> Métodos de creación</h4>
+            <ul class="endpoint-list">
+                <li>/api/v1/auth/register (Registrar usuario)</li>
+                <li>/api/v1/auth/login (Iniciar sesión)</li>
+                <li>/api/v1/news (Crear noticia)</li>
+                <li>/api/v1/news/:id/like (Dar like a una noticia)</li>
+                <li>/api/v1/news/:id/comments (Comentar una noticia)</li>
+            </ul>
+            
+            <h4><span class="method method-put">PUT</span> Métodos de actualización</h4>
+            <ul class="endpoint-list">
+                <li>/api/v1/users/:id (Actualizar usuario)</li>
+                <li>/api/v1/news/:id (Actualizar noticia)</li>
+            </ul>
+            
+            <h4><span class="method method-delete">DELETE</span> Métodos de eliminación</h4>
+            <ul class="endpoint-list">
+                <li>/api/v1/users/:id (Eliminar usuario)</li>
+                <li>/api/v1/news/:id (Eliminar noticia)</li>
+                <li>/api/v1/news/:id/like (Quitar like a una noticia)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Tema claro/oscuro
+        const themeToggle = document.getElementById('themeToggle');
+        
+        themeToggle.addEventListener('change', function() {
+            document.documentElement.setAttribute('data-theme', this.checked ? 'light' : 'dark');
+            localStorage.setItem('theme', this.checked ? 'light' : 'dark');
+        });
+        
+        // Cargar tema guardado
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        themeToggle.checked = savedTheme === 'light';
+        
+        // Token del usuario actual
+        const tokenInput = document.getElementById('token');
+        const refreshTokenBtn = document.getElementById('refreshToken');
+        
+        function loadTokenFromLocalStorage() {
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                tokenInput.value = storedToken;
+            }
+        }
+        
+        refreshTokenBtn.addEventListener('click', loadTokenFromLocalStorage);
+        
+        // Mostrar/ocultar el campo de cuerpo según el método
+        const methodSelect = document.getElementById('method');
+        const requestBodyContainer = document.getElementById('requestBodyContainer');
+        
+        methodSelect.addEventListener('change', function() {
+            requestBodyContainer.style.display = 
+                (this.value === 'GET' || this.value === 'DELETE') ? 'none' : 'block';
+        });
+        
+        // Realizar la petición
+        const fetchButton = document.getElementById('fetchButton');
+        const responseElement = document.getElementById('response');
+        const requestStatus = document.getElementById('requestStatus');
+        const responseTime = document.getElementById('responseTime');
+        
+        fetchButton.addEventListener('click', async () => {
+            const token = tokenInput.value;
+            const endpoint = document.getElementById('customEndpoint').value || 
+                             document.getElementById('endpoint').value;
+            const method = methodSelect.value;
+            
+            if (!token) {
+                responseElement.textContent = 'Error: Debe proporcionar un token JWT válido';
+                return;
+            }
+            
+            responseElement.textContent = 'Cargando...';
+            requestStatus.textContent = `${method} ${endpoint}`;
+            responseTime.textContent = '';
+            
+            const startTime = performance.now();
+            
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                };
+                
+                // Añadir el cuerpo para métodos que lo requieren
+                if (method !== 'GET' && method !== 'DELETE') {
+                    const requestBody = document.getElementById('requestBody').value;
+                    try {
+                        options.body = JSON.stringify(JSON.parse(requestBody));
+                        options.headers['Content-Type'] = 'application/json';
+                    } catch (e) {
+                        responseElement.textContent = `Error en el formato JSON: ${e.message}`;
+                        responseTime.textContent = '';
+                        return;
+                    }
+                }
+                
+                const response = await fetch(`${window.__env.API_BASE_URL}${endpoint}`, options);
+                const endTime = performance.now();
+                
+                const responseTimeMs = Math.round(endTime - startTime);
+                responseTime.textContent = `${responseTimeMs}ms`;
+                
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    data = await response.text();
+                }
+                
+                // Formatear la respuesta
+                if (typeof data === 'object') {
+                    responseElement.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    responseElement.textContent = data;
+                }
+                
+                // Mostrar estado
+                requestStatus.textContent = `${method} ${endpoint} - ${response.status} ${response.statusText}`;
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+                responseTime.textContent = '';
+            }
+        });
+        
+        // Cargar al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTokenFromLocalStorage();
+            
+            // Comprobar y mostrar/ocultar el cuadro de cuerpo basado en el método inicial
+            requestBodyContainer.style.display = 
+                (methodSelect.value === 'GET' || methodSelect.value === 'DELETE') ? 'none' : 'block';
+        });
+    </script>
+</body>
+</html> 
