@@ -775,7 +775,7 @@
     <!-- Cargar configuración de entorno -->
     <script src="config.js"></script>
     <script>
-        const API_BASE_URL = window.__env.API_BASE_URL;
+        const API_BASE_URL = window.location.origin;
         let token = localStorage.getItem('token');
         let modalInstance; // Variable global para la instancia del modal
 
@@ -818,125 +818,131 @@
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
-            if (!await checkAuth()) return;
+            try {
+                // Verificar el token y la autenticación
+                if (!await checkAuth()) return;
 
-            // Cargar datos iniciales
-            await cargarNoticias();
-            await cargarUsuarios();
-            await cargarEstadisticas();
+                // Cargar datos iniciales
+                await cargarNoticias();
+                await cargarUsuarios();
+                await cargarEstadisticas();
 
-            // Inicializar la instancia global del modal
-            modalInstance = new bootstrap.Modal(document.getElementById('nuevaNoticiaModal'));
+                // Inicializar la instancia global del modal
+                modalInstance = new bootstrap.Modal(document.getElementById('nuevaNoticiaModal'));
 
-            // API Viewer initialization
-            initApiViewer();
-            
-            // Inicializar layout responsive
-            initResponsiveLayout();
+                // API Viewer initialization
+                initApiViewer();
+                
+                // Inicializar layout responsive
+                initResponsiveLayout();
 
-            // Manejar formulario de nueva noticia
-            document.getElementById('guardarNoticia').addEventListener('click', async function() {
-                const form = document.getElementById('nuevaNoticiaForm');
-                const formData = new FormData(form);
-                
-                // Validar campos requeridos
-                const titulo = formData.get('titulo')?.trim();
-                const descripcion = formData.get('descripcion')?.trim();
-                
-                if (!titulo || !descripcion) {
-                    showError('El título y la descripción son campos requeridos');
-                    return;
-                }
-                
-                // Validar y formatear las URLs
-                const imageUrl = formData.get('image_url')?.trim() || null;
-                const originalUrl = formData.get('original_url')?.trim() || null;
-                
-                const data = {
-                    titulo: titulo,
-                    descripcion: descripcion,
-                    image_url: imageUrl || null,
-                    original_url: originalUrl || null,
-                    is_oficial: formData.get('is_oficial') === 'on'
-                };
-                
-                console.log('Datos a enviar:', data);
-                
-                try {
-                    toggleLoading(true);
-                    const response = await fetch(`${API_BASE_URL}/news`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(data)
-                    });
-
-                    const responseData = await response.json();
-                    console.log('Respuesta del servidor:', responseData);
-
-                    if (!response.ok) {
-                        throw new Error(responseData.error || 'Error al crear la noticia');
+                // Manejar formulario de nueva noticia
+                document.getElementById('guardarNoticia').addEventListener('click', async function() {
+                    const form = document.getElementById('nuevaNoticiaForm');
+                    const formData = new FormData(form);
+                    
+                    // Validar campos requeridos
+                    const titulo = formData.get('titulo')?.trim();
+                    const descripcion = formData.get('descripcion')?.trim();
+                    
+                    if (!titulo || !descripcion) {
+                        showError('El título y la descripción son campos requeridos');
+                        return;
                     }
-
-                    // Cerrar modal y recargar datos
-                    modalInstance.hide();
-                    form.reset();
-                    await cargarNoticias();
-                } catch (error) {
-                    console.error('Error al crear noticia:', error);
-                    showError(error.message);
-                } finally {
-                    toggleLoading(false);
-                }
-            });
-
-            // Restaurar el comportamiento original del botón guardar cuando se cierra el modal
-            document.getElementById('nuevaNoticiaModal').addEventListener('hidden.bs.modal', function () {
-                document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Nueva Noticia';
-                const form = document.getElementById('nuevaNoticiaForm');
-                form.reset();
-            });
-
-            // Manejar navegación
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const target = this.getAttribute('href').substring(1);
                     
-                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
+                    // Validar y formatear las URLs
+                    const imageUrl = formData.get('image_url')?.trim() || null;
+                    const originalUrl = formData.get('original_url')?.trim() || null;
                     
-                    document.querySelectorAll('.tab-content').forEach(content => {
-                        content.classList.add('d-none');
-                    });
-                    document.getElementById(target).classList.remove('d-none');
+                    const data = {
+                        titulo: titulo,
+                        descripcion: descripcion,
+                        image_url: imageUrl || null,
+                        original_url: originalUrl || null,
+                        is_oficial: formData.get('is_oficial') === 'on'
+                    };
+                    
+                    console.log('Datos a enviar:', data);
+                    
+                    try {
+                        toggleLoading(true);
+                        const response = await fetch(`${API_BASE_URL}/api/v1/news`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        const responseData = await response.json();
+                        console.log('Respuesta del servidor:', responseData);
+
+                        if (!response.ok) {
+                            throw new Error(responseData.error || 'Error al crear la noticia');
+                        }
+
+                        // Cerrar modal y recargar datos
+                        modalInstance.hide();
+                        form.reset();
+                        await cargarNoticias();
+                    } catch (error) {
+                        console.error('Error al crear noticia:', error);
+                        showError(error.message);
+                    } finally {
+                        toggleLoading(false);
+                    }
                 });
-            });
 
-            // Agregar manejadores de eventos para los botones de acción
-            document.getElementById('noticiasTableBody').addEventListener('click', function(e) {
-                const target = e.target;
-                if (target.matches('.btn-primary')) {
-                    const id = target.getAttribute('data-id');
-                    editarNoticia(id);
-                } else if (target.matches('.btn-danger')) {
-                    const id = target.getAttribute('data-id');
-                    eliminarNoticia(id);
-                }
-            });
+                // Restaurar el comportamiento original del botón guardar cuando se cierra el modal
+                document.getElementById('nuevaNoticiaModal').addEventListener('hidden.bs.modal', function () {
+                    document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Nueva Noticia';
+                    const form = document.getElementById('nuevaNoticiaForm');
+                    form.reset();
+                });
 
-            document.getElementById('usuariosTableBody').addEventListener('click', function(e) {
-                const target = e.target;
-                if (target.matches('.btn-primary')) {
-                    const id = target.getAttribute('data-id');
-                    editarUsuario(id);
-                } else if (target.matches('.btn-danger')) {
-                    const id = target.getAttribute('data-id');
-                    eliminarUsuario(id);
-                }
-            });
+                // Manejar navegación
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const target = this.getAttribute('href').substring(1);
+                        
+                        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        document.querySelectorAll('.tab-content').forEach(content => {
+                            content.classList.add('d-none');
+                        });
+                        document.getElementById(target).classList.remove('d-none');
+                    });
+                });
+
+                // Agregar manejadores de eventos para los botones de acción
+                document.getElementById('noticiasTableBody').addEventListener('click', function(e) {
+                    const target = e.target;
+                    if (target.matches('.btn-primary')) {
+                        const id = target.getAttribute('data-id');
+                        editarNoticia(id);
+                    } else if (target.matches('.btn-danger')) {
+                        const id = target.getAttribute('data-id');
+                        eliminarNoticia(id);
+                    }
+                });
+
+                document.getElementById('usuariosTableBody').addEventListener('click', function(e) {
+                    const target = e.target;
+                    if (target.matches('.btn-primary')) {
+                        const id = target.getAttribute('data-id');
+                        editarUsuario(id);
+                    } else if (target.matches('.btn-danger')) {
+                        const id = target.getAttribute('data-id');
+                        eliminarUsuario(id);
+                    }
+                });
+            } catch (error) {
+                console.error('Error al inicializar dashboard:', error);
+                showError('Error al inicializar el dashboard: ' + error.message);
+            }
         });
 
         // Variables para la ordenación y paginación de noticias
@@ -959,7 +965,7 @@
                 });
 
                 // Hacer la petición a la API con los parámetros
-                const response = await fetch(`${API_BASE_URL}/news?${queryParams}`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/news?${queryParams}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1183,7 +1189,8 @@
                         }
                     }
 
-                    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                    // No es necesario agregar "/api/v1" ya que el endpoint ya lo contiene
+                    const response = await fetch(`${window.location.origin}${endpoint}`, options);
                     const endTime = performance.now();
 
                     const responseTimeMs = Math.round(endTime - startTime);
@@ -1213,7 +1220,7 @@
         async function cargarUsuarios() {
             try {
                 toggleLoading(true);
-                const response = await fetch(`${API_BASE_URL}/users`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/users`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1252,7 +1259,7 @@
         async function cargarEstadisticas() {
             try {
                 toggleLoading(true);
-                const response = await fetch(`${API_BASE_URL}/stats`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/stats`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1278,7 +1285,7 @@
 
             try {
                 toggleLoading(true);
-                const response = await fetch(`${API_BASE_URL}/news/${id}`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/news/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -1303,7 +1310,7 @@
                 toggleLoading(true);
                 
                 // Obtener los datos actuales de la noticia
-                const response = await fetch(`${API_BASE_URL}/news/${id}`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/news/${id}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1345,7 +1352,7 @@
                     
                     try {
                         toggleLoading(true);
-                        const updateResponse = await fetch(`${API_BASE_URL}/news/${id}`, {
+                        const updateResponse = await fetch(`${API_BASE_URL}/api/v1/news/${id}`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1388,7 +1395,7 @@
                 console.log('Iniciando edición de usuario con ID:', id);
                 toggleLoading(true);
                 // Obtener los datos actuales del usuario
-                const response = await fetch(`${API_BASE_URL}/users`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/users`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1435,7 +1442,7 @@
                     
                     try {
                         toggleLoading(true);
-                        const updateResponse = await fetch(`${API_BASE_URL}/users/${id}`, {
+                        const updateResponse = await fetch(`${API_BASE_URL}/api/v1/users/${id}`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1479,7 +1486,7 @@
 
             try {
                 toggleLoading(true);
-                const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/users/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -1545,6 +1552,43 @@
                     overlay.classList.remove('active');
                 }
             });
+        }
+
+        // Funciones de API
+        async function fetchAPI(endpoint, options = {}) {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                throw new Error('No hay token de autenticación');
+            }
+            
+            const defaultOptions = {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            const fetchOptions = {
+                ...defaultOptions,
+                ...options
+            };
+            
+            // Usar la ruta completa sin duplicar /api/v1
+            const response = await fetch(`${window.location.origin}${endpoint}`, fetchOptions);
+            
+            if (!response.ok) {
+                let errorMessage;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || `Error HTTP ${response.status}`;
+                } catch (e) {
+                    errorMessage = `Error HTTP ${response.status}`;
+                }
+                throw new Error(errorMessage);
+            }
+            
+            return response.json();
         }
     </script>
 </body>

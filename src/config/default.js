@@ -8,7 +8,7 @@ module.exports = {
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'tu_secreto_super_seguro',
-    expiresIn: '1d'
+    expiresIn: process.env.JWT_EXPIRES_IN || '1d'
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY || ''
@@ -17,5 +17,9 @@ module.exports = {
     feedUrl: process.env.RSS_FEED_URL || 'https://lapiramide.net/feed'
   },
   // Orígenes permitidos para CORS (para helmet CSP y cors plugin)
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001'
+  // Si está configurado como '*', aceptar cualquier origen
+  get corsOrigin() {
+    const origin = process.env.CORS_ORIGIN || 'http://localhost:3001';
+    return origin === '*' ? true : origin;
+  }
 }; 

@@ -55,6 +55,16 @@ fastify.register(require('@fastify/swagger'), {
   }
 });
 
+// Ruta de health check - DEBE estar antes del hook onRequest
+fastify.get('/health', async (request, reply) => {
+  return { status: 'OK' };
+});
+
+// Ruta para favicon (evita 404 en logs) - DEBE estar antes del hook onRequest
+fastify.get('/favicon.ico', async (request, reply) => {
+  return reply.code(204).send();
+});
+
 // Registrar rutas
 fastify.register(authRoutes);
 fastify.register(newsRoutes);
@@ -95,19 +105,19 @@ fastify.get('/dashboard.html', {
   return reply.sendFile('dashboard.html');
 });
 
-// Ruta de health check
-fastify.get('/health', async (request, reply) => {
-  return { status: 'OK' };
-});
-
-// Ruta para favicon (evita 404 en logs)
-fastify.get('/favicon.ico', async (request, reply) => {
-  return reply.code(204).send();
-});
-
 // Manejador de errores global
 fastify.setErrorHandler((error, request, reply) => {
-  request.log.error(error);
+  // Registrar el error con todos los detalles
+  request.log.error({
+    error: error,
+    message: error.message,
+    stack: error.stack,
+    url: request.url,
+    method: request.method,
+    params: request.params,
+    query: request.query,
+    headers: request.headers
+  });
   
   // Error de validación
   if (error.validation) {
@@ -116,17 +126,47 @@ fastify.setErrorHandler((error, request, reply) => {
       .send({ error: 'Error de validación', details: error.validation });
   }
 
+  // Error de JWT
+  if (error.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER' || 
+      error.code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED' ||
+      error.code === 'FST_JWT_AUTHORIZATION_TOKEN_INVALID') {
+    return reply
+      .code(401)
+      .send({ error: 'No autorizado. Por favor inicie sesión nuevamente.' });
+  }
+
   // Error de base de datos
   if (error.code && error.code.startsWith('ER_')) {
     return reply
       .code(500)
-      .send({ error: 'Error de base de datos' });
+      .send({ 
+        error: 'Error de base de datos', 
+        message: 'Ocurrió un problema con la conexión a la base de datos.',
+        code: error.code
+      });
   }
 
-  // Error genérico
+  // Error de conexión a base de datos
+  if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.code === 'PROTOCOL_CONNECTION_LOST') {
+    return reply
+      .code(503)
+      .send({ 
+        error: 'Base de datos no disponible', 
+        message: 'No se pudo conectar a la base de datos. Por favor intente más tarde.' 
+      });
+  }
+
+  // Error genérico pero con información de diagnóstico
+  const statusCode = error.statusCode || 500;
+  
   reply
-    .code(500)
-    .send({ error: 'Error interno del servidor' });
+    .code(statusCode)
+    .send({ 
+      error: 'Error en el servidor', 
+      message: process.env.NODE_ENV === 'production' 
+        ? 'Ha ocurrido un error interno. Por favor intente más tarde.' 
+        : error.message
+    });
 });
 
 module.exports = fastify; 

@@ -1,172 +1,142 @@
-Crear noticias
+# CdelU - Diario Digital
 
-npm run import-news
+## Información General
+Esta es la plataforma para el diario digital CdelU, desarrollada con Node.js, Fastify y MySQL.
 
-1. Estructura de carpetas
-Cdelu.ar/
-├── src/
-│   ├── controllers/         # Lógica de negocio (noticias, usuarios, RSS…)
-│   ├── models/              # Definición de esquemas y consultas MySQL
-│   ├── routes/              # Rutas Fastify por recurso
-│   ├── services/            # Integración con DeepSeek y RSS
-│   ├── middlewares/         # Autenticación, roles, paginación
-│   └── index.js             # Punto de entrada Fastify
-├── config/
-│   ├── default.js           # Configuración general (puertos, etc.)
-│   └── database.js          # Conexión y pooling MySQL
-├── public/
-│   └── dashboard.html       # Interfaz interna para administrador
-├── tests/                   # Test unitarios e integración
-│   ├── news.test.js
-│   ├── users.test.js
-│   └── …
-├── .env.example             # Ejemplo de variables de entorno
-├── package.json
-└── README.md
+## Configuración para Desarrollo
 
+### Requisitos previos
+- Node.js (v14 o superior)
+- MySQL (v5.7 o superior)
 
+### Instalación
+1. Clonar el repositorio:
+   ```bash
+   git clone <url-del-repositorio>
+   cd cdelu.ar
+   ```
 
-2. Esquema básico de base de datos
--- Roles
-CREATE TABLE roles (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(50) NOT NULL UNIQUE
-);
+2. Instalar dependencias:
+   ```bash
+   npm install
+   ```
 
--- Usuarios
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(100) NOT NULL,
-  email VARCHAR(150) NOT NULL UNIQUE,
-  password VARCHAR(255) NOT NULL,
-  role_id INT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (role_id) REFERENCES roles(id)
-);
+3. Configurar variables de entorno:
+   ```bash
+   cp .env.example .env
+   ```
+   Editar el archivo `.env` con la configuración adecuada.
 
--- Noticias
-CREATE TABLE news (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  titulo VARCHAR(255) NOT NULL,
-  descripcion TEXT NOT NULL,
-  resumen TEXT,                 -- generado por DeepSeek
-  image_url VARCHAR(500),
-  original_url VARCHAR(500),
-  published_at DATETIME,        -- fecha de la noticia RSS u oficial
-  is_oficial BOOLEAN DEFAULT TRUE,
-  created_by INT,               -- id de usuario que la creó
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by) REFERENCES users(id)
-);
+4. Iniciar la aplicación en modo desarrollo:
+   ```bash
+   npm run dev
+   ```
 
--- Likes
-CREATE TABLE likes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  news_id INT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (news_id) REFERENCES news(id)
-);
+## Despliegue en Producción (cPanel + Passenger)
 
--- Comentarios
-CREATE TABLE comments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  news_id INT NOT NULL,
-  content TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (news_id) REFERENCES news(id)
-);
+### Preparación
+1. Asegúrate de tener una cuenta de cPanel con soporte para Node.js (Passenger).
+2. Configura un subdominio o dominio para la aplicación.
+3. Configura una base de datos MySQL en cPanel.
 
--- Inserción del rol y usuario administrador
-INSERT INTO roles (nombre) VALUES ('administrador'), ('colaborador'), ('usuario');
+### Archivos de Configuración
+- `.env.production`: Contiene la configuración para el entorno de producción.
+- `.htaccess`: Configuración de Apache para Passenger y rutas.
+- `passenger_app.js`: Punto de entrada para Passenger.
 
-INSERT INTO users (nombre, email, password, role_id)
-VALUES (
-  'Matias Moreira',
-  'matias4315@gmail.com',
-  /* aquí iría el hash de 'w35115415' */,
-  (SELECT id FROM roles WHERE nombre='administrador')
-);
+### Pasos para el Despliegue
+1. Subir todos los archivos al servidor utilizando FTP o el Administrador de Archivos de cPanel.
+2. Configurar `.env.production` con los datos correctos (base de datos, JWT, etc.)
+3. Ejecutar el siguiente comando para preparar el entorno:
+   ```bash
+   cp .env.production .env
+   ```
+4. Reiniciar la aplicación desde el panel de Node.js en cPanel.
 
+## Herramientas de Diagnóstico
 
+### Scripts de Diagnóstico
+Se han incluido varios scripts para ayudar a diagnosticar problemas comunes:
 
+1. **troubleshoot.js**: Diagnóstico completo del sistema
+   ```bash
+   node troubleshoot.js
+   ```
+   Este script verifica:
+   - Archivos críticos del sistema
+   - Variables de entorno
+   - Conexión a la base de datos
+   - Estructura de archivos
 
+2. **check_passenger.js**: Verificación de la configuración de Passenger
+   ```bash
+   node check_passenger.js
+   ```
+   Este script verifica:
+   - Configuración de Apache (.htaccess)
+   - Archivo de inicio (passenger_app.js)
+   - Configuración de puertos y CORS
 
-3. # Cdelu.ar
+3. **restart_app.sh**: Script para reiniciar la aplicación en cPanel
+   ```bash
+   bash restart_app.sh
+   ```
+   Este script:
+   - Realiza una copia de seguridad de la configuración actual
+   - Aplica la configuración de producción
+   - Reinicia la aplicación Node.js
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)  
-[![Licencia](https://img.shields.io/badge/license-MIT-blue)](#)  
-[![Versión](https://img.shields.io/badge/version-0.1.0-yellow)](#)
+### Solución de Problemas Comunes
 
-API REST para un diario online con Fastify y MySQL.
+#### Error 503 (Service Unavailable)
+Posibles causas:
+- La aplicación Node.js no está ejecutándose
+- Problemas con la configuración de Passenger
+- Error en el archivo de inicio
 
----
+Soluciones:
+1. Verificar los logs de Apache en cPanel
+2. Ejecutar `node troubleshoot.js` para diagnóstico completo
+3. Verificar que Passenger está configurado correctamente en `.htaccess`
 
-## 📖 Contenido
-- [Acerca de](#acerca-de)  
-- [Características](#caracter%C3%ADsticas)  
-- [Instalación](#instalaci%C3%B3n)  
-- [Uso](#uso)  
-- [Configuración](#configuraci%C3%B3n)  
-- [Estructura del Proyecto](#estructura-del-proyecto)  
-- [Esquema de Base de Datos](#esquema-de-base-de-datos)  
-- [Roadmap](#roadmap)  
-- [Contribuir](#contribuir)  
-- [Licencia](#licencia)  
-- [Autores y Agradecimientos](#autores-y-agradecimientos)  
-- [Soporte](#soporte)
+#### Error 500 en API
+Posibles causas:
+- Problemas de conexión a la base de datos
+- Error en la ejecución de consultas
+- Configuración incorrecta
 
----
+Soluciones:
+1. Verificar credenciales de la base de datos en `.env`
+2. Ejecutar `node troubleshoot.js` para verificar la conexión
+3. Revisar los logs de la aplicación
 
-## 🧐 Acerca de
-Cdelu.ar es un diario online que extrae automáticamente noticias desde un feed RSS (`https://lapiramide.net/feed`) y permite además a los usuarios crear «noticias no oficiales».  
-La API está construida con Fastify para maximizar el rendimiento y utiliza MySQL optimizado para consultas rápidas.
+#### Problemas de CORS
+Posibles causas:
+- Configuración incorrecta de CORS
+- Headers no configurados correctamente
 
----
+Soluciones:
+1. Verificar la configuración CORS en `src/config/default.js`
+2. Revisar los headers en `.htaccess`
 
-## ✨ Características
-- **API REST** con Fastify y MySQL altamente optimizada  
-- **Paginación**: muestra 10 noticias por página  
-- **Ordenación** por fecha de publicación  
-- **Feed RSS**: importación automática de la última noticia  
-- **Generación de contenido IA**:
-  - Nuevo título a partir de la descripción original  
-  - Resumen automático usando `DEEPSEEK_API_KEY`  
-- **Gestión de usuarios** con 3 roles: administrador, colaboradores y usuarios  
-- **Interacción**: likes y comentarios sobre noticias  
-- **Dashboard** (solo admin) con métricas y gestión de noticias  
+## Cambios Recientes
 
----
+### Mejoras de Estabilidad
+- Mejor manejo de errores en la conexión a la base de datos
+- Implementación de reintentos de conexión
+- Optimización de configuración CORS
 
-## 🚀 Instalación
-### Requisitos
-- Node.js ≥14  
-- MySQL 8+  
+### Corrección de Rutas API
+- Configuración correcta de rutas API en `.htaccess`
+- Mejora en la gestión de solicitudes OPTIONS (preflight)
+- Corrección de redirecciones para archivos estáticos
 
-### Pasos
-```bash
-git clone https://github.com/tuusuario/Cdelu.ar.git
-cd Cdelu.ar
-npm install
+### Optimización de Recursos
+- Configuración de límites de memoria en `passenger_app.js`
+- Mejora en la gestión de GC para reducir el consumo de memoria
 
-
-
-
-
-
-⚙️ Configuración
-Copia y renombra .env.example a .env
-
-
-PORT=3000
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=cdelu_db
-DEEPSEEK_API_KEY=sk-9cf6c2f6d50a46f1a28c7aa1c6920332
-RSS_FEED_URL=https://lapiramide.net/feed
+## Contribución
+1. Crear una rama para tu característica (`git checkout -b feature/nueva-caracteristica`)
+2. Hacer commit de tus cambios (`git commit -m 'Añade nueva característica'`)
+3. Hacer push a la rama (`git push origin feature/nueva-caracteristica`)
+4. Crear un Pull Request 
