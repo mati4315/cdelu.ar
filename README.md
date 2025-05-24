@@ -119,6 +119,57 @@ Soluciones:
 1. Verificar la configuración CORS en `src/config/default.js`
 2. Revisar los headers en `.htaccess`
 
+## Características Principales de la API
+
+### Gestión de Noticias (news)
+
+Endpoints para crear, leer, actualizar y eliminar noticias. 
+(Detalles de estos endpoints pueden estar aquí o en una documentación de API más extensa)
+
+### Gestión de Usuarios (users)
+
+Endpoints para registro, login, y gestión de perfiles de usuario y roles.
+
+### Gestión de Comunicaciones (com)
+
+Esta funcionalidad permite a los usuarios autenticados (con rol 'usuario') crear entradas de comunicación que pueden incluir texto, un video y múltiples imágenes.
+
+**Endpoints Principales para Comunicaciones:**
+
+*   **`POST /api/v1/com`**: Crea una nueva entrada de comunicación.
+    *   **Autenticación Requerida**: Sí (rol 'usuario').
+    *   **Content-Type**: `multipart/form-data`.
+    *   **Campos del Formulario (multipart/form-data):**
+        *   `titulo` (string, requerido): Título de la comunicación.
+        *   `descripcion` (string, requerido): Descripción o contenido principal.
+        *   `video` (file, opcional): Archivo de video (límite 200MB).
+        *   `image` (file[], opcional): Hasta 6 archivos de imagen (límite 10MB por imagen). Enviar como múltiples campos `image` o un array si el cliente lo soporta.
+    *   **Respuesta Exitosa (201 Created)**: Objeto JSON con los detalles de la comunicación creada, incluyendo `id`, `titulo`, `descripcion`, `user_id`, `video_url` (string), `image_url` (string JSON de URLs), `image_urls` (array de strings, más conveniente para el frontend), `created_at`, `updated_at`.
+
+*   **`GET /api/v1/com`**: Obtiene una lista de todas las comunicaciones.
+    *   **Autenticación Requerida**: No (o sí, según se configure en la ruta).
+    *   **Respuesta Exitosa (200 OK)**: Objeto JSON con una propiedad `data` que es un array de objetos de comunicación. Cada objeto incluirá `image_urls` (array) si existen imágenes.
+
+*   **`GET /api/v1/com/:id`**: Obtiene una comunicación específica por su ID.
+    *   **Autenticación Requerida**: No (o sí, según se configure).
+    *   **Respuesta Exitosa (200 OK)**: Objeto JSON con los detalles de la comunicación, incluyendo `image_urls` (array) si existen imágenes.
+
+*   **`PUT /api/v1/com/:id`**: Actualiza una comunicación existente.
+    *   **Autenticación Requerida**: Sí (propietario de la comunicación o rol 'administrador'/'editor').
+    *   **Content-Type**: `multipart/form-data` (si se envían campos de texto) o `application/json` (si solo se envían URLs como texto).
+    *   **Campos (ej. para texto):** `titulo`, `descripcion`, `image_url` (string), `video_url` (string).
+    *   **Respuesta Exitosa (200 OK)**: Objeto JSON con la comunicación actualizada.
+
+*   **`DELETE /api/v1/com/:id`**: Elimina una comunicación por su ID (y los archivos asociados del servidor).
+    *   **Autenticación Requerida**: Sí (propietario o rol 'administrador'/'editor').
+    *   **Respuesta Exitosa (204 No Content)**.
+
+### Documentación Dinámica de Endpoints (docs)
+
+*   **`GET /api/v1/docs/endpoints`**: Obtiene una lista de todos los endpoints disponibles en la API, extraídos de la especificación OpenAPI generada. 
+    *   **Autenticación Requerida**: Sí (rol 'administrador').
+    *   **Respuesta Exitosa (200 OK)**: Array de objetos, cada uno describiendo un endpoint (`method`, `path`, `summary`, `tags`).
+
 ## Cambios Recientes
 
 ### Mejoras de Estabilidad

@@ -5,24 +5,26 @@ const newsRoutes = require('./routes/news');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const statsRoutes = require('./routes/stats');
+const comRoutes = require('./routes/com.routes.js');
+const docsRoutes = require('./routes/docs.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
 fastify.register(require('@fastify/cors'), {
   origin: config.corsOrigin
 });
-fastify.register(require('@fastify/helmet'), {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", config.corsOrigin],
-      fontSrc: ["'self'", "https://cdn.jsdelivr.net"]
-    }
-  }
-});
+// fastify.register(require('@fastify/helmet'), {
+//   contentSecurityPolicy: {
+//     directives: {
+//       defaultSrc: ["'self'"],
+//       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+//       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+//       imgSrc: ["'self'", "data:", "https:"],
+//       connectSrc: ["'self'", config.corsOrigin],
+//       fontSrc: ["'self'", "https://cdn.jsdelivr.net"]
+//     }
+//   }
+// });
 fastify.register(require('@fastify/jwt'), {
   secret: config.jwt.secret,
   sign: {
@@ -33,26 +35,52 @@ fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, '../public'),
   prefix: '/public/'
 });
-fastify.register(require('@fastify/swagger'), {
-  routePrefix: '/documentation',
-  exposeRoute: true,
-  swagger: {
-    info: {
-      title: 'CdelU API',
-      description: 'API para el diario online CdelU',
-      version: '1.0.0'
-    },
-    schemes: ['http'],
-    consumes: ['application/json'],
-    produces: ['application/json'],
-    securityDefinitions: {
-      apiKey: {
-        type: 'apiKey',
-        name: 'Authorization',
-        in: 'header'
-      }
-    }
+// fastify.register(require('@fastify/swagger'), {
+//   routePrefix: '/documentation',
+//   exposeRoute: true,
+//   swagger: {
+//     info: {
+//       title: 'CdelU API',
+//       description: 'API para el diario online CdelU',
+//       version: '1.0.0'
+//     },
+//     schemes: ['http'],
+//     consumes: ['application/json'],
+//     produces: ['application/json'],
+//     securityDefinitions: {
+//       apiKey: {
+//         type: 'apiKey',
+//         name: 'Authorization',
+//         in: 'header'
+//       }
+//     }
+//   }
+// });
+
+// Registrar fastify/multipart para subida de archivos
+fastify.register(require('@fastify/multipart'), {
+  attachFieldsToBody: true,
+  limits: {
+    fieldNameSize: 100,        // Max field name size in bytes
+    fieldSize: 1024 * 1024 * 1,  // Max field value size in bytes (1MB para campos de texto)
+    fields: 10,                // Max number of non-file fields
+    fileSize: 1024 * 1024 * 200, // Max file size in bytes (200MB por archivo)
+    files: 7,                  // Max number of file fields (ej. 1 video + 6 imagenes)
+    headerPairs: 2000          // Max number of header key=>value pairs
   }
+  // onFile: async function (part) { // Handler de diagnóstico COMENTADO TEMPORALMENTE
+  //   console.log('[Multipart onFile] Detectado archivo:', {
+  //     fieldname: part.fieldname,
+  //     filename: part.filename,
+  //     mimetype: part.mimetype,
+  //     streamReadable: part.file.readable,
+  //     streamFlowing: part.file.readableFlowing,
+  //     streamEnded: part.file.readableEnded,
+  //     streamDestroyed: part.file.destroyed
+  //   });
+  //   // Con attachFieldsToBody: true, no necesitamos hacer nada más aquí para que el stream
+  //   // se adjunte al body. Simplemente estamos inspeccionando su estado.
+  // }
 });
 
 // Ruta de health check - DEBE estar antes del hook onRequest
@@ -70,6 +98,8 @@ fastify.register(authRoutes);
 fastify.register(newsRoutes);
 fastify.register(userRoutes);
 fastify.register(statsRoutes);
+fastify.register(comRoutes);
+fastify.register(docsRoutes);
 
 fastify.addHook('onRequest', async (request, reply) => {
     // Excluir rutas públicas (login, register, health) de la autenticación
@@ -77,7 +107,8 @@ fastify.addHook('onRequest', async (request, reply) => {
         request.url.startsWith('/api/v1/auth/') ||
         request.url === '/health' ||
         request.url.startsWith('/public/') ||
-        request.url === '/favicon.ico'
+        request.url === '/favicon.ico' ||
+        (request.method === 'GET' && request.url.startsWith('/api/v1/news'))
     ) {
         return;
     }
@@ -91,14 +122,13 @@ fastify.addHook('onRequest', async (request, reply) => {
     }
 });
 
-// Ruta protegida para el dashboard
+// Las siguientes rutas de dashboard usan `onRequest` a nivel de ruta, lo cual está bien.
 fastify.get('/dashboard', {
   onRequest: [authenticate, authorize(['administrador'])]
 }, async (request, reply) => {
   return reply.sendFile('dashboard.html');
 });
 
-// Ruta alternativa para el dashboard.html
 fastify.get('/dashboard.html', {
   onRequest: [authenticate, authorize(['administrador'])]
 }, async (request, reply) => {
