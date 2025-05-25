@@ -495,6 +495,11 @@
                                 <i class="bi bi-code-slash"></i> <span class="ms-1 d-none d-sm-inline">API Viewer</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a href="#" id="logoutButton" class="nav-link align-middle px-0">
+                                <i class="bi bi-box-arrow-right"></i> <span class="ms-1 d-none d-sm-inline">Cerrar Sesión</span>
+                            </a>
+                        </li>
                     </ul>
                     
                     <!-- Theme Switch -->
@@ -683,6 +688,11 @@
                                     <option value="/api/v1/users/profile">GET /api/v1/users/profile</option>
                                     <option value="/api/v1/news/1">GET /api/v1/news/1</option>
                                     <option value="/api/v1/news/1/comments">GET /api/v1/news/1/comments</option>
+                                    <option value="/api/v1/com">POST /api/v1/com (multipart)</option>
+                                    <option value="/api/v1/com">GET /api/v1/com</option>
+                                    <option value="/api/v1/com/1">GET /api/v1/com/1</option>
+                                    <option value="/api/v1/com/1">PUT /api/v1/com/1</option>
+                                    <option value="/api/v1/com/1">DELETE /api/v1/com/1</option>
                                 </select>
                             </div>
                         </div>
@@ -817,6 +827,12 @@
             return true;
         }
 
+        function logout() {
+            localStorage.removeItem('token');
+            token = null; // Asegurarse de que la variable global también se limpie
+            window.location.href = '/public/login.html';
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 // Verificar el token y la autenticación
@@ -837,69 +853,83 @@
                 initResponsiveLayout();
 
                 // Manejar formulario de nueva noticia
-                document.getElementById('guardarNoticia').addEventListener('click', async function() {
-                    const form = document.getElementById('nuevaNoticiaForm');
-                    const formData = new FormData(form);
-                    
-                    // Validar campos requeridos
-                    const titulo = formData.get('titulo')?.trim();
-                    const descripcion = formData.get('descripcion')?.trim();
-                    
-                    if (!titulo || !descripcion) {
-                        showError('El título y la descripción son campos requeridos');
-                        return;
-                    }
-                    
-                    // Validar y formatear las URLs
-                    const imageUrl = formData.get('image_url')?.trim() || null;
-                    const originalUrl = formData.get('original_url')?.trim() || null;
-                    
-                    const data = {
-                        titulo: titulo,
-                        descripcion: descripcion,
-                        image_url: imageUrl || null,
-                        original_url: originalUrl || null,
-                        is_oficial: formData.get('is_oficial') === 'on'
-                    };
-                    
-                    console.log('Datos a enviar:', data);
-                    
-                    try {
-                        toggleLoading(true);
-                        const response = await fetch(`${API_BASE_URL}/api/v1/news`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify(data)
-                        });
-
-                        const responseData = await response.json();
-                        console.log('Respuesta del servidor:', responseData);
-
-                        if (!response.ok) {
-                            throw new Error(responseData.error || 'Error al crear la noticia');
+                const guardarNoticiaBtn = document.getElementById('guardarNoticia');
+                
+                // Guardar la función original para poder restaurarla después
+                if (guardarNoticiaBtn && !guardarNoticiaBtn._originalOnClick) {
+                    guardarNoticiaBtn._originalOnClick = guardarNoticiaBtn.onclick;
+                }
+                
+                if (guardarNoticiaBtn) {
+                    guardarNoticiaBtn.addEventListener('click', async function() {
+                        const form = document.getElementById('nuevaNoticiaForm');
+                        
+                        // Verificar si estamos en modo edición
+                        const editingId = form.getAttribute('data-editing-id');
+                        if (editingId) {
+                            // Si hay un ID de edición, la función onClick ya fue reemplazada 
+                            // por editarNoticia y se encargará de hacer el PUT
+                            return;
                         }
+                        
+                        const formData = new FormData(form);
+                        
+                        // Validar campos requeridos
+                        const tituloField = Array.isArray(formData.get('titulo')) ? formData.get('titulo')[0] : formData.get('titulo');
+                        const descripcionField = Array.isArray(formData.get('descripcion')) ? formData.get('descripcion')[0] : formData.get('descripcion');
+                        
+                        const titulo = tituloField ? tituloField.value : undefined;
+                        const descripcion = descripcionField ? descripcionField.value : undefined;
+                        
+                        if (!titulo || !descripcion) {
+                            showError('El título y la descripción son campos requeridos');
+                            return;
+                        }
+                        
+                        // Validar y formatear las URLs
+                        const imageUrl = formData.get('image_url')?.trim() || null;
+                        const originalUrl = formData.get('original_url')?.trim() || null;
+                        
+                        const data = {
+                            titulo: titulo,
+                            descripcion: descripcion,
+                            image_url: imageUrl || null,
+                            original_url: originalUrl || null,
+                            is_oficial: formData.get('is_oficial') === 'on'
+                        };
+                        
+                        console.log('Datos a enviar:', data);
+                        
+                        try {
+                            toggleLoading(true);
+                            const response = await fetch(`${API_BASE_URL}/api/v1/news`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify(data)
+                            });
 
-                        // Cerrar modal y recargar datos
-                        modalInstance.hide();
-                        form.reset();
-                        await cargarNoticias();
-                    } catch (error) {
-                        console.error('Error al crear noticia:', error);
-                        showError(error.message);
-                    } finally {
-                        toggleLoading(false);
-                    }
-                });
+                            const responseData = await response.json();
+                            console.log('Respuesta del servidor:', responseData);
 
-                // Restaurar el comportamiento original del botón guardar cuando se cierra el modal
-                document.getElementById('nuevaNoticiaModal').addEventListener('hidden.bs.modal', function () {
-                    document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Nueva Noticia';
-                    const form = document.getElementById('nuevaNoticiaForm');
-                    form.reset();
-                });
+                            if (!response.ok) {
+                                throw new Error(responseData.error || 'Error al crear la noticia');
+                            }
+
+                            // Cerrar modal y recargar datos
+                            modalInstance.hide();
+                            form.reset();
+                            await cargarNoticias();
+                        } catch (error) {
+                            console.error('Error al crear noticia:', error);
+                            showError(error.message);
+                        } finally {
+                            toggleLoading(false);
+                        }
+                    });
+                }
 
                 // Manejar navegación
                 document.querySelectorAll('.nav-link').forEach(link => {
@@ -939,6 +969,16 @@
                         eliminarUsuario(id);
                     }
                 });
+
+                // Event listener para el botón de cerrar sesión
+                const logoutBtn = document.getElementById('logoutButton');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        logout();
+                    });
+                }
+
             } catch (error) {
                 console.error('Error al inicializar dashboard:', error);
                 showError('Error al inicializar el dashboard: ' + error.message);
@@ -1123,50 +1163,64 @@
         // Inicializar API Viewer
         function initApiViewer() {
             // Obtener referencias a elementos
-            const apiToken = document.getElementById('api-token');
-            const apiMethod = document.getElementById('api-method');
-            const apiEndpoint = document.getElementById('api-endpoint');
-            const apiCustomEndpoint = document.getElementById('api-custom-endpoint');
-            const apiBody = document.getElementById('api-body');
-            const apiBodyContainer = document.getElementById('api-body-container');
+            const apiTokenInput = document.getElementById('api-token'); // Renombrado para evitar conflicto
+            const apiMethodSelect = document.getElementById('api-method'); // Renombrado
+            const apiEndpointSelect = document.getElementById('api-endpoint'); // Renombrado
+            const apiCustomEndpointInput = document.getElementById('api-custom-endpoint'); // Renombrado
+            const apiBodyTextarea = document.getElementById('api-body'); // Renombrado
+            const apiBodyContainerDiv = document.getElementById('api-body-container'); // Renombrado
             const sendApiRequestBtn = document.getElementById('sendApiRequest');
-            const apiResponse = document.getElementById('api-response');
-            const apiStatus = document.getElementById('api-status');
-            const apiTime = document.getElementById('api-time');
+            const apiResponsePre = document.getElementById('api-response'); // Renombrado
+            const apiStatusDiv = document.getElementById('api-status'); // Renombrado
+            const apiTimeDiv = document.getElementById('api-time'); // Renombrado
             const refreshTokenBtn = document.getElementById('refreshTokenBtn');
 
             // Cargar token
-            apiToken.value = token;
+            apiTokenInput.value = token;
+
+            // Cargar endpoints dinámicamente
+            loadApiEndpoints(apiEndpointSelect, apiCustomEndpointInput);
 
             // Botón de refrescar token
             refreshTokenBtn.addEventListener('click', function() {
-                apiToken.value = localStorage.getItem('token');
+                apiTokenInput.value = localStorage.getItem('token');
             });
 
             // Mostrar/ocultar el contenedor del cuerpo según el método
-            apiMethod.addEventListener('change', function() {
-                apiBodyContainer.style.display = 
+            apiMethodSelect.addEventListener('change', function() {
+                apiBodyContainerDiv.style.display =
                     (this.value === 'GET' || this.value === 'DELETE') ? 'none' : 'block';
             });
 
             // Ejecutar comprobación inicial para el contenedor del body
-            apiBodyContainer.style.display = 
-                (apiMethod.value === 'GET' || apiMethod.value === 'DELETE') ? 'none' : 'block';
+            apiBodyContainerDiv.style.display =
+                (apiMethodSelect.value === 'GET' || apiMethodSelect.value === 'DELETE') ? 'none' : 'block';
+
+            // Sincronizar endpoint personalizado con selección
+            apiEndpointSelect.addEventListener('change', function() {
+                if (this.value) {
+                    apiCustomEndpointInput.value = this.value;
+                }
+            });
 
             // Enviar petición
             sendApiRequestBtn.addEventListener('click', async function() {
-                const endpoint = apiCustomEndpoint.value || apiEndpoint.value;
-                const method = apiMethod.value;
-                const userToken = apiToken.value;
+                const endpointPath = apiCustomEndpointInput.value || apiEndpointSelect.value; // Usar path, no method + path
+                const method = apiMethodSelect.value;
+                const userToken = apiTokenInput.value;
 
                 if (!userToken) {
-                    apiResponse.textContent = 'Error: Debe proporcionar un token JWT válido';
+                    apiResponsePre.textContent = 'Error: Debe proporcionar un token JWT válido';
+                    return;
+                }
+                if (!endpointPath) {
+                    apiResponsePre.textContent = 'Error: Debe seleccionar o ingresar un endpoint.';
                     return;
                 }
 
-                apiResponse.textContent = 'Cargando...';
-                apiStatus.textContent = `${method} ${endpoint}`;
-                apiTime.textContent = '';
+                apiResponsePre.textContent = 'Cargando...';
+                apiStatusDiv.textContent = `${method} ${endpointPath}`;
+                apiTimeDiv.textContent = '';
 
                 const startTime = performance.now();
 
@@ -1178,23 +1232,21 @@
                         }
                     };
 
-                    // Añadir el body para métodos apropiados
                     if (method !== 'GET' && method !== 'DELETE') {
                         try {
-                            options.body = JSON.stringify(JSON.parse(apiBody.value));
+                            options.body = JSON.stringify(JSON.parse(apiBodyTextarea.value));
                             options.headers['Content-Type'] = 'application/json';
                         } catch (e) {
-                            apiResponse.textContent = `Error en el formato JSON: ${e.message}`;
+                            apiResponsePre.textContent = `Error en el formato JSON: ${e.message}`;
                             return;
                         }
                     }
 
-                    // No es necesario agregar "/api/v1" ya que el endpoint ya lo contiene
-                    const response = await fetch(`${window.location.origin}${endpoint}`, options);
+                    const response = await fetch(`${window.location.origin}${endpointPath}`, options);
                     const endTime = performance.now();
 
                     const responseTimeMs = Math.round(endTime - startTime);
-                    apiTime.textContent = `${responseTimeMs}ms`;
+                    apiTimeDiv.textContent = `${responseTimeMs}ms`;
 
                     let data;
                     const contentType = response.headers.get('content-type');
@@ -1205,16 +1257,56 @@
                     }
 
                     if (typeof data === 'object') {
-                        apiResponse.textContent = JSON.stringify(data, null, 2);
+                        apiResponsePre.textContent = JSON.stringify(data, null, 2);
                     } else {
-                        apiResponse.textContent = data;
+                        apiResponsePre.textContent = data;
                     }
 
-                    apiStatus.textContent = `${method} ${endpoint} - ${response.status} ${response.statusText}`;
+                    apiStatusDiv.textContent = `${method} ${endpointPath} - ${response.status} ${response.statusText}`;
                 } catch (error) {
-                    apiResponse.textContent = `Error: ${error.message}`;
+                    apiResponsePre.textContent = `Error: ${error.message}`;
+                    apiStatusDiv.textContent = `${method} ${endpointPath} - Error`;
                 }
             });
+        }
+
+        async function loadApiEndpoints(selectElement, customEndpointInput) {
+            try {
+                const response = await fetchAPI('/api/v1/docs/endpoints'); // Usa la función fetchAPI existente
+                selectElement.innerHTML = '<option value="">Seleccione un endpoint...</option>'; // Opción por defecto
+
+                response.forEach(endpoint => {
+                    const option = document.createElement('option');
+                    option.value = endpoint.path; // El valor es solo la ruta
+                    // El texto puede ser más descriptivo, ej: "GET /api/v1/users - Obtener todos los usuarios"
+                    let displayText = `${endpoint.method} ${endpoint.path}`;
+                    if(endpoint.summary) {
+                        displayText += ` - ${endpoint.summary}`;
+                    }
+                    option.textContent = displayText;
+                    option.setAttribute('data-method', endpoint.method); // Guardar el método para posible uso futuro
+                    selectElement.appendChild(option);
+                });
+
+                // Evento para actualizar el método HTTP cuando se selecciona un endpoint del select
+                selectElement.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption && selectedOption.value) {
+                        customEndpointInput.value = selectedOption.value; // Actualiza el input personalizado
+                        const method = selectedOption.getAttribute('data-method');
+                        if (method) {
+                            document.getElementById('api-method').value = method; // Actualiza el select de método
+                             // Disparar el evento change en api-method para actualizar la visibilidad del body
+                            document.getElementById('api-method').dispatchEvent(new Event('change'));
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error al cargar endpoints para API Viewer:', error);
+                selectElement.innerHTML = '<option value="">Error al cargar endpoints</option>';
+                showError('No se pudieron cargar los endpoints para el API Viewer: ' + error.message + '. Asegúrese de ser administrador.');
+            }
         }
 
         async function cargarUsuarios() {
@@ -1336,8 +1428,17 @@
                 // Cambiar el título del modal
                 document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Editar Noticia';
                 
+                // Almacenar el ID de la noticia que se está editando en un atributo del formulario
+                form.setAttribute('data-editing-id', id);
+                
                 // Cambiar el comportamiento del botón guardar
                 const guardarBtn = document.getElementById('guardarNoticia');
+                
+                // Guardar la función original para poder restaurarla después
+                if (!guardarBtn._originalOnClick) {
+                    guardarBtn._originalOnClick = guardarBtn.onclick;
+                }
+                
                 guardarBtn.onclick = async function() {
                     const formData = new FormData(form);
                     const data = {
@@ -1389,6 +1490,22 @@
                 toggleLoading(false);
             }
         }
+
+        // Modificar también el evento hidden.bs.modal para restaurar el comportamiento original
+        document.getElementById('nuevaNoticiaModal').addEventListener('hidden.bs.modal', function () {
+            document.querySelector('#nuevaNoticiaModal .modal-title').textContent = 'Nueva Noticia';
+            const form = document.getElementById('nuevaNoticiaForm');
+            form.reset();
+            
+            // Eliminar el atributo de edición
+            form.removeAttribute('data-editing-id');
+            
+            // Restaurar el comportamiento original del botón guardar
+            const guardarBtn = document.getElementById('guardarNoticia');
+            if (guardarBtn._originalOnClick) {
+                guardarBtn.onclick = guardarBtn._originalOnClick;
+            }
+        });
 
         async function editarUsuario(id) {
             try {

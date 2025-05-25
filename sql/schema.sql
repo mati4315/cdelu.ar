@@ -51,4 +51,17 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (news_id) REFERENCES news(id)
+);
+
+-- Comunicaciones/Entradas de usuarios
+CREATE TABLE IF NOT EXISTS com (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  titulo VARCHAR(255) NOT NULL,
+  descripcion TEXT NOT NULL,
+  video_url VARCHAR(500), -- Para la URL del video
+  image_url VARCHAR(500), -- Para la URL de la imagen
+  user_id INT NOT NULL,   -- Quién creó la entrada
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) -- Enlaza con la tabla de usuarios
 ); 
