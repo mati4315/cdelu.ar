@@ -5,7 +5,46 @@ Todas las cambios notables a este proyecto serán documentadas en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - YYYY-MM-DD
+## [1.1.0] - 2025-01-14
+
+### Fixed - CRÍTICO
+- **🔧 SOLUCIÓN COMPLETA AL LOGIN (Error 500)**: 
+  - **Agregado el registro del plugin JWT** en `src/app.js` y `src/app.minimal.js` que estaba faltando
+  - El controlador de login ahora puede generar tokens JWT correctamente usando `reply.jwtSign()`
+  - Configuración JWT carga desde `src/config/default.js` con secret y tiempo de expiración
+  - **Login dashboard.html y login.html funcionan completamente**
+
+- **🚀 SOLUCIÓN A ERRORES DE WEBASSEMBLY**: 
+  - **Filtrado automático** de errores `RangeError: WebAssembly.instantiate(): Out of memory`
+  - **Deshabilitado WebAssembly globalmente** en `passenger_app.js` con variables de entorno
+  - **Corregido error `server.close is not a function`** en `src/index.js` - ahora usa `app.close()`
+  - **Configuración anti-WASM** en package.json con scripts optimizados para cPanel
+  - **Instalada versión específica de undici** (5.28.4) para mejor compatibilidad
+
+### Added
+- **📊 Endpoints de Diagnóstico Mejorados**:
+  - `/health` - Health check básico
+  - `/api/v1/status` - Diagnóstico completo con estado de BD y memoria
+  - **Filtros inteligentes de errores** - Los errores de WebAssembly/undici se marcan como "ignorados"
+
+- **⚙️ Configuración Optimizada para Hosting Compartido**:
+  - **Límites de memoria** configurados a 512MB apropiados para cPanel
+  - **Pool de conexiones reducido** a 5 conexiones máximo
+  - **Variables de entorno** configuradas: `UNDICI_WASM=0`, `NODE_OPTIONS=--no-wasm`
+  - **Scripts npm** específicos para cPanel: `start:cpanel`, `start:safe`, `start:minimal`
+
+### Changed
+- **🔄 Aplicación con Fallback Robusto**:
+  - Si falla la app completa → carga automáticamente `app.minimal.js` (sin Swagger)
+  - Si falla la mínima → servidor de emergencia ultra-básico
+  - **Manejo resiliente** de errores de conexión de BD
+
+- **📝 Documentación Actualizada**:
+  - `INSTRUCCIONES_CPANEL_WEBASSEMBLY.md` - Guía completa para cPanel
+  - **Logs más informativos** con códigos de error específicos
+  - **Instrucciones paso a paso** para solucionar problemas
+
+## [1.0.0] - 2025-01-13
 
 ### Added
 - **Funcionalidad de Comunicaciones (Tabla `com`)**:
@@ -37,5 +76,28 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 ### Security
 - Incrementado el límite de tamaño del payload general y de archivos individuales en `@fastify/multipart` para evitar errores `413 Payload Too Large` con archivos grandes.
 
-## [Previous Version] - YYYY-MM-DD 
-(Aquí irían las notas de versiones anteriores si las hubiera) 
+---
+
+## Notas de Migración
+
+### Para usuarios existentes (v1.0.0 → v1.1.0):
+
+1. **Subir archivos actualizados** a cPanel:
+   - `passenger_app.js`
+   - `src/app.js`
+   - `src/app.minimal.js` 
+   - `src/index.js`
+   - `package.json`
+
+2. **Ejecutar en cPanel**:
+   ```bash
+   npm install undici@5.28.4 --save
+   ```
+
+3. **Reiniciar aplicación** desde cPanel > Setup Node.js App
+
+### Verificación:
+- ✅ `/health` responde OK
+- ✅ `/api/v1/status` muestra estado de BD
+- ✅ Login funciona en dashboard.html
+- ✅ Errores WebAssembly marcados como "ignorados" 

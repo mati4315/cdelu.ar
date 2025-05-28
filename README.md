@@ -1,193 +1,389 @@
-# CdelU - Diario Digital
+# 📰 CdelU - Portal de Noticias API
 
-## Información General
-Esta es la plataforma para el diario digital CdelU, desarrollada con Node.js, Fastify y MySQL.
+> **Versión 1.1.0** - API REST para el diario online CdelU con autenticación JWT, gestión multimedia y optimizaciones para hosting compartido.
 
-## Configuración para Desarrollo
+[![GitHub repo](https://img.shields.io/badge/GitHub-mati4315%2Fcdelu.ar-blue?logo=github)](https://github.com/mati4315/cdelu.ar)
+[![Node.js](https://img.shields.io/badge/Node.js-16%2B-green?logo=node.js)](https://nodejs.org/)
+[![Fastify](https://img.shields.io/badge/Fastify-5.3%2B-black?logo=fastify)](https://fastify.io/)
+[![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange?logo=mysql)](https://mysql.com/)
 
-### Requisitos previos
-- Node.js (v14 o superior)
-- MySQL (v5.7 o superior)
+## 🚀 Características Principales
 
-### Instalación
-1. Clonar el repositorio:
-   ```bash
-   git clone <url-del-repositorio>
-   cd cdelu.ar
-   ```
+- ✅ **API RESTful** con Fastify optimizada para hosting compartido
+- 🔐 **Autenticación JWT** completa con roles de usuario
+- 📱 **CORS configurado** para múltiples orígenes
+- 📚 **Documentación Swagger/OpenAPI** interactiva
+- 🖼️ **Upload multimedia** (imágenes y videos hasta 200MB)
+- 📊 **Sistema de comunicaciones** con múltiples archivos
+- 🔄 **Fallback automático** para máxima estabilidad
+- 🌐 **Optimizado para cPanel** y hosting compartido
+- 📈 **Diagnóstico avanzado** con endpoints de health check
+- 💬 **Sistema completo** de comentarios, likes y tags
 
-2. Instalar dependencias:
-   ```bash
-   npm install
-   ```
+## 🛡️ Últimas Mejoras (v1.1.0)
 
-3. Configurar variables de entorno:
-   ```bash
-   cp .env.example .env
-   ```
-   Editar el archivo `.env` con la configuración adecuada.
+### ✅ Soluciones Críticas Implementadas
 
-4. Iniciar la aplicación en modo desarrollo:
-   ```bash
-   npm run dev
-   ```
+- **🔧 LOGIN COMPLETAMENTE FUNCIONAL**: Corregido error 500 agregando configuración JWT faltante
+- **🚀 ERRORES WEBASSEMBLY SOLUCIONADOS**: Filtrado automático y configuración anti-WASM para cPanel
+- **⚙️ OPTIMIZADO PARA HOSTING COMPARTIDO**: Límites de memoria, pool de conexiones y variables de entorno
+- **🔄 FALLBACK ROBUSTO**: App mínima sin Swagger como respaldo automático
 
-## Despliegue en Producción (cPanel + Passenger)
+## 📋 Requisitos
 
-### Preparación
-1. Asegúrate de tener una cuenta de cPanel con soporte para Node.js (Passenger).
-2. Configura un subdominio o dominio para la aplicación.
-3. Configura una base de datos MySQL en cPanel.
+- **Node.js** v16+ (recomendado v18+)
+- **MySQL** 5.7+ 
+- **Hosting con soporte Node.js** (Passenger recomendado)
 
-### Archivos de Configuración
-- `.env.production`: Contiene la configuración para el entorno de producción.
-- `.htaccess`: Configuración de Apache para Passenger y rutas.
-- `passenger_app.js`: Punto de entrada para Passenger.
+## 🛠️ Instalación Rápida
 
-### Pasos para el Despliegue
-1. Subir todos los archivos al servidor utilizando FTP o el Administrador de Archivos de cPanel.
-2. Configurar `.env.production` con los datos correctos (base de datos, JWT, etc.)
-3. Ejecutar el siguiente comando para preparar el entorno:
-   ```bash
-   cp .env.production .env
-   ```
-4. Reiniciar la aplicación desde el panel de Node.js en cPanel.
+### Para Desarrollo Local
 
-## Herramientas de Diagnóstico
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/mati4315/cdelu.ar.git
+cd cdelu.ar
 
-### Scripts de Diagnóstico
-Se han incluido varios scripts para ayudar a diagnosticar problemas comunes:
+# 2. Instalar dependencias
+npm install
 
-1. **troubleshoot.js**: Diagnóstico completo del sistema
-   ```bash
-   node troubleshoot.js
-   ```
-   Este script verifica:
-   - Archivos críticos del sistema
-   - Variables de entorno
-   - Conexión a la base de datos
-   - Estructura de archivos
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus datos
 
-2. **check_passenger.js**: Verificación de la configuración de Passenger
-   ```bash
-   node check_passenger.js
-   ```
-   Este script verifica:
-   - Configuración de Apache (.htaccess)
-   - Archivo de inicio (passenger_app.js)
-   - Configuración de puertos y CORS
+# 4. Configurar base de datos MySQL
+# Ejecutar scripts SQL de /sql/
 
-3. **restart_app.sh**: Script para reiniciar la aplicación en cPanel
-   ```bash
-   bash restart_app.sh
-   ```
-   Este script:
-   - Realiza una copia de seguridad de la configuración actual
-   - Aplica la configuración de producción
-   - Reinicia la aplicación Node.js
+# 5. Iniciar servidor
+npm run dev
+```
 
-### Solución de Problemas Comunes
+### Para cPanel/Hosting Compartido
 
-#### Error 503 (Service Unavailable)
-Posibles causas:
-- La aplicación Node.js no está ejecutándose
-- Problemas con la configuración de Passenger
-- Error en el archivo de inicio
+```bash
+# 1. Subir archivos al servidor
+# 2. En cPanel terminal:
+cd /home/tu_usuario/diario.tu_dominio.com
+npm install
+npm install undici@5.28.4 --save
 
-Soluciones:
-1. Verificar los logs de Apache en cPanel
-2. Ejecutar `node troubleshoot.js` para diagnóstico completo
-3. Verificar que Passenger está configurado correctamente en `.htaccess`
+# 3. Configurar .env con datos del hosting
+# 4. En cPanel > Setup Node.js App:
+#    - Startup File: passenger_app.js
+#    - Hacer clic en "Restart"
+```
 
-#### Error 500 en API
-Posibles causas:
-- Problemas de conexión a la base de datos
-- Error en la ejecución de consultas
-- Configuración incorrecta
+## 🔧 Configuración de Variables de Entorno
 
-Soluciones:
-1. Verificar credenciales de la base de datos en `.env`
-2. Ejecutar `node troubleshoot.js` para verificar la conexión
-3. Revisar los logs de la aplicación
+```env
+# === BASE DE DATOS ===
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=tu_usuario_mysql
+DB_PASSWORD=tu_password_mysql
+DB_NAME=cdelu_db
 
-#### Problemas de CORS
-Posibles causas:
-- Configuración incorrecta de CORS
-- Headers no configurados correctamente
+# === JWT AUTENTICACIÓN ===
+JWT_SECRET=tu_clave_super_secreta_de_minimo_32_caracteres
+JWT_EXPIRES_IN=24h
 
-Soluciones:
-1. Verificar la configuración CORS en `src/config/default.js`
-2. Revisar los headers en `.htaccess`
+# === SERVIDOR ===
+PORT=3001
+NODE_ENV=production
 
-## Características Principales de la API
+# === CORS (Dominios permitidos) ===
+CORS_ORIGIN=https://tu-dominio.com,https://www.tu-dominio.com
 
-### Gestión de Noticias (news)
+# === OPTIMIZACIÓN HOSTING COMPARTIDO ===
+NODE_OPTIONS=--no-wasm --max-old-space-size=512
+UNDICI_WASM=0
+UNDICI_DISABLE_WASM=true
+UV_THREADPOOL_SIZE=2
 
-Endpoints para crear, leer, actualizar y eliminar noticias. 
-(Detalles de estos endpoints pueden estar aquí o en una documentación de API más extensa)
+# === RSS (Opcional) ===
+RSS_ENABLED=true
+RSS_FEED_URL=https://ejemplo.com/feed
+```
 
-### Gestión de Usuarios (users)
+## 📚 Documentación de la API
 
-Endpoints para registro, login, y gestión de perfiles de usuario y roles.
+### 🌐 Acceso a la Documentación
 
-### Gestión de Comunicaciones (com)
+| Entorno | URL | Descripción |
+|---------|-----|-------------|
+| **Desarrollo** | `http://localhost:3001/api/v1/docs` | Swagger UI completo |
+| **Producción** | `https://tu-dominio.com/api/v1/docs` | Swagger UI en vivo |
+| **Dashboard** | `https://tu-dominio.com/public/dashboard.html` | Panel de administración |
 
-Esta funcionalidad permite a los usuarios autenticados (con rol 'usuario') crear entradas de comunicación que pueden incluir texto, un video y múltiples imágenes.
+### 🔍 Endpoints de Diagnóstico
 
-**Endpoints Principales para Comunicaciones:**
+```bash
+# Health check básico
+curl https://tu-dominio.com/health
 
-*   **`POST /api/v1/com`**: Crea una nueva entrada de comunicación.
-    *   **Autenticación Requerida**: Sí (rol 'usuario').
-    *   **Content-Type**: `multipart/form-data`.
-    *   **Campos del Formulario (multipart/form-data):**
-        *   `titulo` (string, requerido): Título de la comunicación.
-        *   `descripcion` (string, requerido): Descripción o contenido principal.
-        *   `video` (file, opcional): Archivo de video (límite 200MB).
-        *   `image` (file[], opcional): Hasta 6 archivos de imagen (límite 10MB por imagen). Enviar como múltiples campos `image` o un array si el cliente lo soporta.
-    *   **Respuesta Exitosa (201 Created)**: Objeto JSON con los detalles de la comunicación creada, incluyendo `id`, `titulo`, `descripcion`, `user_id`, `video_url` (string), `image_url` (string JSON de URLs), `image_urls` (array de strings, más conveniente para el frontend), `created_at`, `updated_at`.
+# Estado detallado del sistema
+curl https://tu-dominio.com/api/v1/status
+```
 
-*   **`GET /api/v1/com`**: Obtiene una lista de todas las comunicaciones.
-    *   **Autenticación Requerida**: No (o sí, según se configure en la ruta).
-    *   **Respuesta Exitosa (200 OK)**: Objeto JSON con una propiedad `data` que es un array de objetos de comunicación. Cada objeto incluirá `image_urls` (array) si existen imágenes.
+## 🔗 Endpoints Principales
 
-*   **`GET /api/v1/com/:id`**: Obtiene una comunicación específica por su ID.
-    *   **Autenticación Requerida**: No (o sí, según se configure).
-    *   **Respuesta Exitosa (200 OK)**: Objeto JSON con los detalles de la comunicación, incluyendo `image_urls` (array) si existen imágenes.
+### 🔐 Autenticación
+```bash
+# Registro
+POST /api/v1/auth/register
+Content-Type: application/json
+{
+  "nombre": "Usuario Ejemplo",
+  "email": "usuario@ejemplo.com", 
+  "password": "password123",
+  "role": "usuario"
+}
 
-*   **`PUT /api/v1/com/:id`**: Actualiza una comunicación existente.
-    *   **Autenticación Requerida**: Sí (propietario de la comunicación o rol 'administrador'/'editor').
-    *   **Content-Type**: `multipart/form-data` (si se envían campos de texto) o `application/json` (si solo se envían URLs como texto).
-    *   **Campos (ej. para texto):** `titulo`, `descripcion`, `image_url` (string), `video_url` (string).
-    *   **Respuesta Exitosa (200 OK)**: Objeto JSON con la comunicación actualizada.
+# Login
+POST /api/v1/auth/login
+Content-Type: application/json
+{
+  "email": "usuario@ejemplo.com",
+  "password": "password123"  
+}
+```
 
-*   **`DELETE /api/v1/com/:id`**: Elimina una comunicación por su ID (y los archivos asociados del servidor).
-    *   **Autenticación Requerida**: Sí (propietario o rol 'administrador'/'editor').
-    *   **Respuesta Exitosa (204 No Content)**.
+### 📰 Noticias
 
-### Documentación Dinámica de Endpoints (docs)
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/v1/news` | Listar noticias (paginado) | No |
+| `GET` | `/api/v1/news/:id` | Obtener noticia específica | No |
+| `POST` | `/api/v1/news` | Crear noticia | Sí |
+| `PUT` | `/api/v1/news/:id` | Actualizar noticia | Sí (colaborador+) |
+| `DELETE` | `/api/v1/news/:id` | Eliminar noticia | Sí (admin) |
 
-*   **`GET /api/v1/docs/endpoints`**: Obtiene una lista de todos los endpoints disponibles en la API, extraídos de la especificación OpenAPI generada. 
-    *   **Autenticación Requerida**: Sí (rol 'administrador').
-    *   **Respuesta Exitosa (200 OK)**: Array de objetos, cada uno describiendo un endpoint (`method`, `path`, `summary`, `tags`).
+### 💬 Comunicaciones Multimedia
 
-## Cambios Recientes
+```bash
+# Crear comunicación con archivos
+POST /api/v1/com
+Content-Type: multipart/form-data
+Authorization: Bearer TOKEN
 
-### Mejoras de Estabilidad
-- Mejor manejo de errores en la conexión a la base de datos
-- Implementación de reintentos de conexión
-- Optimización de configuración CORS
+FormData:
+- titulo: "Mi comunicación"
+- descripcion: "Descripción del contenido"
+- video: [archivo.mp4] (opcional, máx 200MB)
+- image: [imagen1.jpg] (opcional)
+- image: [imagen2.jpg] (opcional, hasta 6 imágenes)
+```
 
-### Corrección de Rutas API
-- Configuración correcta de rutas API en `.htaccess`
-- Mejora en la gestión de solicitudes OPTIONS (preflight)
-- Corrección de redirecciones para archivos estáticos
+### 👥 Gestión de Usuarios
 
-### Optimización de Recursos
-- Configuración de límites de memoria en `passenger_app.js`
-- Mejora en la gestión de GC para reducir el consumo de memoria
+| Método | Endpoint | Descripción | Rol Requerido |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/v1/users` | Listar usuarios | Admin |
+| `GET` | `/api/v1/users/profile` | Perfil actual | Usuario |
+| `PUT` | `/api/v1/users/:id` | Actualizar usuario | Admin |
+| `DELETE` | `/api/v1/users/:id` | Eliminar usuario | Admin |
 
-## Contribución
-1. Crear una rama para tu característica (`git checkout -b feature/nueva-caracteristica`)
-2. Hacer commit de tus cambios (`git commit -m 'Añade nueva característica'`)
-3. Hacer push a la rama (`git push origin feature/nueva-caracteristica`)
-4. Crear un Pull Request 
+## 🔐 Sistema de Autenticación
+
+### Obtener Token JWT
+```bash
+curl -X POST https://tu-dominio.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@ejemplo.com", "password": "tu_password"}'
+
+# Respuesta:
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "nombre": "Administrador",
+    "email": "admin@ejemplo.com",
+    "role": "administrador"
+  }
+}
+```
+
+### Usar Token en Requests
+```bash
+curl -X GET https://tu-dominio.com/api/v1/users \
+  -H "Authorization: Bearer TU_TOKEN_JWT_AQUI"
+```
+
+## 👥 Roles y Permisos
+
+| Rol | Permisos |
+|-----|----------|
+| **usuario** | ✅ Crear noticias, comentarios, likes<br>✅ Crear comunicaciones<br>✅ Ver perfil propio |
+| **colaborador** | ✅ Todo lo anterior<br>✅ Editar cualquier noticia<br>✅ Moderar comentarios |
+| **administrador** | ✅ Todo lo anterior<br>✅ Gestionar usuarios<br>✅ Eliminar contenido<br>✅ Acceso a estadísticas |
+
+## 📊 Paginación e Infinite Scroll
+
+### Parámetros de Consulta
+```bash
+GET /api/v1/news?page=1&limit=10&sort=published_at&order=desc&tag=tecnologia
+```
+
+### Respuesta con Metadatos
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "titulo": "Noticia Ejemplo",
+      "contenido": "...",
+      "published_at": "2025-01-14T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 150,
+    "page": 1, 
+    "limit": 10,
+    "totalPages": 15,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+## 🔧 Solución de Problemas
+
+### 🚨 Problemas Comunes y Soluciones
+
+#### ❌ Error 500 en Login
+```bash
+# Problema: Plugin JWT no registrado
+# Solución: Verificar que src/app.js incluya:
+fastify.register(require('@fastify/jwt'), {
+  secret: config.jwt.secret
+});
+```
+
+#### ❌ Errores WebAssembly
+```bash
+# Los errores como estos son normales y filtrados:
+# "RangeError: WebAssembly.instantiate(): Out of memory"
+# "💡 Error de WebAssembly/undici ignorado (esperado en hosting compartido)"
+```
+
+#### ❌ Error 503 Service Unavailable
+```bash
+# 1. Verificar estado del servidor
+curl https://tu-dominio.com/health
+
+# 2. Verificar configuración en cPanel > Setup Node.js App
+# 3. Revisar logs de error en cPanel
+```
+
+### 📋 Verificación de Estado
+
+```bash
+# 1. Health check básico
+curl https://tu-dominio.com/health
+# Esperado: {"status":"OK","timestamp":"...","uptime":123}
+
+# 2. Estado detallado
+curl https://tu-dominio.com/api/v1/status
+# Muestra: estado BD, memoria, entorno
+
+# 3. Test de login
+curl -X POST https://tu-dominio.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"123456"}'
+```
+
+## 🚀 Deployment en cPanel
+
+### 📋 Checklist de Deployment
+
+- [ ] ✅ Archivos subidos al servidor
+- [ ] ✅ `.env` configurado con datos del hosting  
+- [ ] ✅ Base de datos MySQL creada e importada
+- [ ] ✅ `npm install` ejecutado
+- [ ] ✅ `npm install undici@5.28.4 --save` ejecutado
+- [ ] ✅ cPanel > Setup Node.js App configurado
+- [ ] ✅ Startup File: `passenger_app.js`
+- [ ] ✅ Aplicación reiniciada
+- [ ] ✅ `/health` responde OK
+- [ ] ✅ Login funciona correctamente
+
+### 🔗 Scripts NPM Disponibles
+
+```bash
+# Desarrollo
+npm run dev              # Nodemon para desarrollo
+npm run start           # Inicio normal
+
+# Producción/cPanel
+npm run start:cpanel    # Optimizado para cPanel con anti-WASM
+npm run start:safe      # Modo seguro con límites de memoria
+npm run start:minimal   # Versión mínima sin Swagger
+
+# Utilidades
+npm run check          # Verificación de estado
+npm test               # Ejecutar tests
+```
+
+## 📁 Estructura del Proyecto
+
+```
+cdelu.ar/
+├── 📁 src/
+│   ├── 📁 config/          # Configuración
+│   ├── 📁 controllers/     # Controladores de API
+│   ├── 📁 routes/          # Rutas de endpoints
+│   ├── 📁 middlewares/     # Middlewares de auth
+│   ├── 📁 services/        # Servicios (RSS, etc)
+│   ├── 📄 app.js           # App principal con Swagger
+│   ├── 📄 app.minimal.js   # App sin Swagger (fallback)
+│   └── 📄 index.js         # Punto de entrada
+├── 📁 public/              # Archivos estáticos
+│   ├── 📄 dashboard.html   # Panel de administración
+│   └── 📄 login.html       # Página de login
+├── 📁 sql/                 # Scripts de base de datos
+├── 📄 passenger_app.js     # Punto de entrada para cPanel
+├── 📄 package.json         # Dependencias y scripts
+├── 📄 .env                 # Variables de entorno
+└── 📄 README.md            # Esta documentación
+```
+
+## 🤝 Contribuir
+
+1. **Fork** del repositorio
+2. **Crear rama** para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. **Commit** de tus cambios (`git commit -m 'Add: nueva funcionalidad'`)
+4. **Push** a la rama (`git push origin feature/nueva-funcionalidad`)
+5. **Pull Request** describiendo los cambios
+
+## 📝 Changelog
+
+Ver [CHANGELOG.md](CHANGELOG.md) para el historial completo de cambios.
+
+### 🆕 Últimos Cambios (v1.1.0)
+- ✅ **Solución completa al sistema de login** (error 500 corregido)
+- 🚀 **Errores WebAssembly solucionados** para hosting compartido
+- ⚙️ **Optimizaciones para cPanel** con límites de memoria y fallbacks
+- 📊 **Diagnóstico mejorado** con endpoints de health check
+
+## 📞 Soporte
+
+- **GitHub Issues**: [Reportar problemas](https://github.com/mati4315/cdelu.ar/issues)
+- **Documentación**: [Ver docs en vivo](https://diario.trigamer.xyz/api/v1/docs)
+- **Email**: dev@cdelu.ar
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+---
+
+### 🔗 Links Útiles
+
+- **🌐 Sitio en vivo**: [diario.trigamer.xyz](https://diario.trigamer.xyz)
+- **📚 Documentación API**: [diario.trigamer.xyz/api/v1/docs](https://diario.trigamer.xyz/api/v1/docs)
+- **📊 Dashboard**: [diario.trigamer.xyz/public/dashboard.html](https://diario.trigamer.xyz/public/dashboard.html)
+- **💻 Repositorio**: [github.com/mati4315/cdelu.ar](https://github.com/mati4315/cdelu.ar)
+
+---
+
+> **¿Problemas?** Revisa el [CHANGELOG.md](CHANGELOG.md) y las [instrucciones de cPanel](INSTRUCCIONES_CPANEL_WEBASSEMBLY.md) para soluciones detalladas. 
