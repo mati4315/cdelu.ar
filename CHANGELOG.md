@@ -5,6 +5,31 @@ Todas las cambios notables a este proyecto serán documentadas en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-01-14
+
+### Added - NUEVO: Soporte para Apps Móviles
+- **📱 Endpoints Específicos para Apps Móviles**:
+  - `GET /api/v1/mobile/config` - Configuración de la app móvil
+  - `GET /api/v1/mobile/health` - Health check optimizado para móviles
+  - `GET /api/v1/mobile/feed` - Feed optimizado para apps móviles
+  - `POST /api/v1/mobile/login` - Login optimizado para apps móviles
+  - **Respuestas optimizadas** con datos específicos para consumo móvil
+
+- **🌐 CORS Mejorado para Apps Móviles**:
+  - **Permitir todos los orígenes** (`*`) para apps móviles
+  - **Headers específicos** para mejor rendimiento en móviles
+  - **Configuración automática** que las apps pueden obtener al iniciar
+
+- **📋 Guía Completa para Frontend Android**:
+  - **`readme-android.md`** - Guía paso a paso para conectar apps Android
+  - **Script de testing** (`test-mobile-api.js`) para verificar endpoints móviles
+  - **Ejemplos de código** listos para copiar y pegar
+
+### Changed
+- **🔧 Configuración de CORS** actualizada para permitir conexiones desde apps móviles
+- **📊 Headers de respuesta** mejorados con información específica para móviles
+- **🛡️ Middleware de autenticación** actualizado para permitir endpoints móviles públicos
+
 ## [1.1.0] - 2025-01-14
 
 ### Fixed - CRÍTICO

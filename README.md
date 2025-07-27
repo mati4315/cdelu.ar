@@ -1,6 +1,6 @@
 # 📰 CdelU - Portal de Noticias API
 
-> **Versión 1.1.0** - API REST para el diario online CdelU con autenticación JWT, gestión multimedia y optimizaciones para hosting compartido.
+> **Versión 1.2.0** - API REST para el diario online CdelU con autenticación JWT, gestión multimedia, optimizaciones para hosting compartido y **soporte completo para apps móviles**.
 
 [![GitHub repo](https://img.shields.io/badge/GitHub-mati4315%2Fcdelu.ar-blue?logo=github)](https://github.com/mati4315/cdelu.ar)
 [![Node.js](https://img.shields.io/badge/Node.js-16%2B-green?logo=node.js)](https://nodejs.org/)
@@ -20,9 +20,16 @@
 - 📈 **Diagnóstico avanzado** con endpoints de health check
 - 💬 **Sistema completo** de comentarios, likes y tags
 
-## 🛡️ Últimas Mejoras (v1.1.0)
+## 🛡️ Últimas Mejoras (v1.2.0)
 
-### ✅ Soluciones Críticas Implementadas
+### ✅ Nuevas Funcionalidades para Apps Móviles
+
+- **📱 ENDPOINTS MÓVILES COMPLETOS**: Configuración, health check, feed y login optimizados para Android/iOS
+- **🌐 CORS MEJORADO**: Permitir conexiones desde apps móviles con headers optimizados
+- **📋 GUÍA ANDROID COMPLETA**: Documentación paso a paso para conectar apps Android
+- **🧪 TESTING AUTOMATIZADO**: Script para verificar que todos los endpoints móviles funcionan
+
+### ✅ Soluciones Críticas Implementadas (v1.1.0)
 
 - **🔧 LOGIN COMPLETAMENTE FUNCIONAL**: Corregido error 500 agregando configuración JWT faltante
 - **🚀 ERRORES WEBASSEMBLY SOLUCIONADOS**: Filtrado automático y configuración anti-WASM para cPanel
@@ -81,7 +88,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USER=tu_usuario_mysql
 DB_PASSWORD=tu_password_mysql
-DB_NAME=cdelu_db
+DB_NAME=trigamer_diario
 
 # === JWT AUTENTICACIÓN ===
 JWT_SECRET=tu_clave_super_secreta_de_minimo_32_caracteres
@@ -126,6 +133,23 @@ curl https://tu-dominio.com/api/v1/status
 ```
 
 ## 🔗 Endpoints Principales
+
+### 📱 Endpoints Específicos para Apps Móviles
+
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/v1/mobile/config` | Configuración para apps móviles | No |
+| `GET` | `/api/v1/mobile/health` | Health check optimizado para móviles | No |
+| `GET` | `/api/v1/mobile/feed` | Feed optimizado para apps móviles | No |
+| `POST` | `/api/v1/mobile/login` | Login optimizado para apps móviles | No |
+
+### 🎯 Características para Apps Móviles
+
+- **✅ CORS configurado** para permitir conexiones desde apps móviles
+- **✅ Headers optimizados** para mejor rendimiento en móviles
+- **✅ Endpoints específicos** con datos optimizados para consumo móvil
+- **✅ Configuración automática** que las apps pueden obtener al iniciar
+- **✅ Guía completa** (`readme-android.md`) para desarrollo de apps Android
 
 ### 🔐 Autenticación
 ```bash
@@ -292,6 +316,42 @@ curl -X POST https://tu-dominio.com/api/v1/auth/login \
   -d '{"email":"test@test.com","password":"123456"}'
 ```
 
+## 📱 Soporte para Apps Móviles
+
+### 🎯 Endpoints Móviles Disponibles
+
+Tu API ahora incluye **endpoints específicos optimizados para apps móviles**:
+
+```bash
+# Configuración de la app
+GET /api/v1/mobile/config
+
+# Health check optimizado
+GET /api/v1/mobile/health
+
+# Feed optimizado para móviles
+GET /api/v1/mobile/feed?page=1&limit=10
+
+# Login optimizado
+POST /api/v1/mobile/login
+```
+
+### 📋 Guía para Desarrolladores Móviles
+
+- **📱 [readme-android.md](readme-android.md)** - Guía completa paso a paso para conectar apps Android
+- **🧪 `test-mobile-api.js`** - Script para verificar que todos los endpoints móviles funcionan
+- **🌐 CORS configurado** - Permite conexiones desde cualquier app móvil
+- **📊 Headers optimizados** - Mejor rendimiento en dispositivos móviles
+
+### ✅ Verificación Rápida
+
+```bash
+# Probar endpoints móviles
+node test-mobile-api.js
+
+# Resultado esperado: 9/9 tests exitosos
+```
+
 ## 🚀 Deployment en cPanel
 
 ### 📋 Checklist de Deployment
@@ -359,7 +419,13 @@ cdelu.ar/
 
 Ver [CHANGELOG.md](CHANGELOG.md) para el historial completo de cambios.
 
-### 🆕 Últimos Cambios (v1.1.0)
+### 🆕 Últimos Cambios (v1.2.0)
+- 📱 **Soporte completo para apps móviles** con endpoints específicos
+- 🌐 **CORS mejorado** para permitir conexiones desde apps Android/iOS
+- 📋 **Guía Android completa** con documentación paso a paso
+- 🧪 **Testing automatizado** para verificar endpoints móviles
+
+### 🆕 Cambios Anteriores (v1.1.0)
 - ✅ **Solución completa al sistema de login** (error 500 corregido)
 - 🚀 **Errores WebAssembly solucionados** para hosting compartido
 - ⚙️ **Optimizaciones para cPanel** con límites de memoria y fallbacks
@@ -382,6 +448,7 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 - **🌐 Sitio en vivo**: [diario.trigamer.xyz](https://diario.trigamer.xyz)
 - **📚 Documentación API**: [diario.trigamer.xyz/api/v1/docs](https://diario.trigamer.xyz/api/v1/docs)
 - **📊 Dashboard**: [diario.trigamer.xyz/public/dashboard.html](https://diario.trigamer.xyz/public/dashboard.html)
+- **📱 Guía Android**: [readme-android.md](readme-android.md) - Guía completa para apps móviles
 - **💻 Repositorio**: [github.com/mati4315/cdelu.ar](https://github.com/mati4315/cdelu.ar)
 
 ---

@@ -7,6 +7,8 @@ const userRoutes = require('./routes/users');
 const statsRoutes = require('./routes/stats');
 const comRoutes = require('./routes/com.routes.js');
 const docsRoutes = require('./routes/docs.routes.js');
+const feedRoutes = require('./routes/feed.routes.js');
+const mobileRoutes = require('./routes/mobile.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
@@ -21,15 +23,23 @@ fastify.register(require('@fastify/cors'), {
     'Accept',
     'Origin',
     'Access-Control-Request-Method',
-    'Access-Control-Request-Headers'
+    'Access-Control-Request-Headers',
+    'User-Agent',
+    'Cache-Control',
+    'Pragma'
   ],
   exposedHeaders: [
     'X-API-Version',
     'X-Response-Time',
-    'X-Total-Count'
+    'X-Total-Count',
+    'X-Auth-Token',
+    'X-User-Id'
   ],
   optionsSuccessStatus: 200,
-  preflightContinue: false
+  preflightContinue: false,
+  // Configuración específica para apps móviles
+  maxAge: 86400, // Cache preflight por 24 horas
+  allowCredentials: true
 });
 
 // Registrar plugin JWT
@@ -47,6 +57,15 @@ fastify.register(require('@fastify/static'), {
   decorateReply: false,
   index: false, // No servir index.html automáticamente
   list: false   // No listar directorios
+});
+
+// Registrar plugin para servir archivos estáticos en la raíz
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, '..', 'public'),
+  prefix: '/',
+  decorateReply: false,
+  index: false,
+  list: false
 });
 
 // Registrar Swagger para documentación de API
@@ -92,6 +111,7 @@ fastify.register(require('@fastify/swagger'), {
       { name: 'Usuarios', description: 'Gestión de usuarios y perfiles' },
       { name: 'Estadísticas', description: 'Métricas y estadísticas del sistema' },
       { name: 'Comunicaciones', description: 'Sistema de comunicaciones multimedia' },
+      { name: 'Feed', description: 'Feed unificado de contenido (noticias y comunidad)' },
       { name: 'Documentación', description: 'Endpoints de documentación interna' }
     ]
   },
@@ -239,26 +259,42 @@ fastify.register(userRoutes);
 fastify.register(statsRoutes);
 fastify.register(comRoutes);
 fastify.register(docsRoutes);
+fastify.register(feedRoutes);
+fastify.register(mobileRoutes);
 
 // Ruta específica para el dashboard (opcional)
 fastify.get('/dashboard', async (request, reply) => {
   return reply.sendFile('dashboard.html');
 });
 
-// Ruta para la raíz que redirija al dashboard (opcional)
+// Ruta para la raíz que redirija al dashboard
 fastify.get('/', async (request, reply) => {
-  return reply.redirect('/public/dashboard.html');
+  return reply.redirect('/dashboard.html');
 });
 
 // Hook de autenticación mejorado
 fastify.addHook('onRequest', async (request, reply) => {
+    // Agregar headers específicos para apps móviles
+    reply.header('X-API-Version', '1.0.0');
+    reply.header('X-Response-Time', Date.now());
+    
+    // Headers para CORS específicos de apps móviles
+    if (request.headers.origin) {
+        reply.header('Access-Control-Allow-Origin', request.headers.origin);
+    }
+    reply.header('Access-Control-Allow-Credentials', 'true');
+    
     // Lista de rutas públicas que no requieren autenticación
     const publicRoutes = [
         '/api/v1/auth/',
         '/health',
         '/public/',
+        '/dashboard',
+        '/',
         '/favicon.ico',
-        '/api/v1/docs'  // Añadido para permitir acceso a Swagger UI
+        '/api/v1/docs',  // Añadido para permitir acceso a Swagger UI
+        '/api/v1/health', // Endpoint de health check
+        '/api/v1/mobile/' // Endpoints móviles (todos públicos)
     ];
     
     // Verificar si es una ruta pública
@@ -270,7 +306,11 @@ fastify.addHook('onRequest', async (request, reply) => {
     const isPublicNewsRoute = request.method === 'GET' && 
         request.url.startsWith('/api/v1/news');
     
-    if (isPublicRoute || isPublicNewsRoute) {
+    // Las rutas GET del feed son públicas
+    const isPublicFeedRoute = request.method === 'GET' && 
+        request.url.startsWith('/api/v1/feed');
+    
+    if (isPublicRoute || isPublicNewsRoute || isPublicFeedRoute) {
         return;
     }
     
