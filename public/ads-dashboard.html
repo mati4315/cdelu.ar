@@ -417,6 +417,7 @@
                         });
                         this.user = response.data.user;
                     } catch (error) {
+                        console.error('Error de autenticación:', error);
                         localStorage.removeItem('token');
                         window.location.href = '/login.html';
                     }
@@ -436,9 +437,13 @@
                     try {
                         const params = {
                             page: this.pagination.page,
-                            limit: this.pagination.limit,
-                            ...this.filters
+                            limit: this.pagination.limit
                         };
+                        
+                        // Solo agregar filtros si no están vacíos
+                        if (this.filters.categoria) params.categoria = this.filters.categoria;
+                        if (this.filters.activo) params.activo = this.filters.activo;
+                        if (this.filters.sort) params.sort = this.filters.sort;
                         
                         const response = await axios.get('/api/v1/ads', {
                             params,
@@ -449,6 +454,10 @@
                         this.pagination = response.data.pagination;
                     } catch (error) {
                         console.error('Error cargando anuncios:', error);
+                        if (error.response?.status === 401) {
+                            localStorage.removeItem('token');
+                            window.location.href = '/login.html';
+                        }
                     } finally {
                         this.loading = false;
                     }

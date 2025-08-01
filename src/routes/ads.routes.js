@@ -115,7 +115,7 @@ async function adsRoutes(fastify, options) {
           page: { type: 'integer', minimum: 1, default: 1 },
           limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
           categoria: { type: 'string', description: 'Filtrar por categoría' },
-          activo: { type: 'string', enum: ['true', 'false'], description: 'Filtrar por estado activo' }
+          activo: { type: 'string', enum: ['true', 'false', ''], description: 'Filtrar por estado activo' }
         }
       },
       response: {
