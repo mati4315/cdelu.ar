@@ -7,7 +7,7 @@
 
 const axios = require('axios');
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3001';
+const BASE_URL = process.env.API_URL || 'https://diario.trigamer.xyz';
 
 // Colores para console
 const colors = {

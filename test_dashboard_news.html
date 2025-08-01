@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard News</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .news-item { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            background: white;
+        }
+        .news-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        .news-meta { color: #666; font-size: 14px; margin-bottom: 10px; }
+        .news-content { color: #333; line-height: 1.5; }
+        .debug-info { background: #e9ecef; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Dashboard - Noticias</h1>
+        
+        <div class="debug-info">
+            <h3>Información de Debug</h3>
+            <div id="debugInfo">Iniciando...</div>
+        </div>
+        
+        <div>
+            <button class="btn-primary" onclick="testLogin()">🔐 Test Login</button>
+            <button class="btn-success" onclick="loadNews()">📰 Cargar Noticias</button>
+            <button class="btn-warning" onclick="clearNews()">🗑️ Limpiar</button>
+        </div>
+        
+        <div id="newsList">
+            <p>Las noticias aparecerán aquí...</p>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:3001';
+        let authToken = null;
+        
+        function updateDebugInfo(message, type = 'info') {
+            const debugInfo = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugInfo.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        }
+        
+        async function testLogin() {
+            updateDebugInfo('🔐 Probando login...');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@cdelu.ar',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    updateDebugInfo('✅ Login exitoso');
+                    updateDebugInfo(`🔑 Token: ${data.token.substring(0, 20)}...`);
+                } else {
+                    updateDebugInfo(`❌ Error en login: ${data.error}`);
+                }
+            } catch (error) {
+                updateDebugInfo(`❌ Error de conexión: ${error.message}`);
+            }
+        }
+        
+        async function loadNews() {
+            if (!authToken) {
+                updateDebugInfo('❌ No hay token de autenticación');
+                return;
+            }
+            
+            updateDebugInfo('📰 Cargando noticias...');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/v1/news`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateDebugInfo('✅ Noticias cargadas correctamente');
+                    updateDebugInfo(`📊 Total: ${data.pagination.total} noticias`);
+                    renderNewsList(data.data);
+                } else {
+                    updateDebugInfo(`❌ Error al cargar noticias: ${data.error}`);
+                }
+            } catch (error) {
+                updateDebugInfo(`❌ Error de conexión: ${error.message}`);
+            }
+        }
+        
+        function renderNewsList(news) {
+            const newsList = document.getElementById('newsList');
+            
+            if (news.length === 0) {
+                newsList.innerHTML = '<p>No hay noticias disponibles</p>';
+                return;
+            }
+            
+            const newsHtml = news.map(item => `
+                <div class="news-item">
+                    <div class="news-title">${item.titulo}</div>
+                    <div class="news-meta">
+                        <strong>Autor:</strong> ${item.autor || 'Anónimo'} | 
+                        <strong>Fecha:</strong> ${item.created_at} | 
+                        <strong>Tipo:</strong> ${item.is_oficial ? 'Oficial' : 'Usuario'}
+                    </div>
+                    <div class="news-content">
+                        ${item.descripcion.substring(0, 150)}...
+                    </div>
+                    <div class="news-meta">
+                        <strong>Likes:</strong> ${item.likes_count || 0} | 
+                        <strong>Comentarios:</strong> ${item.comments_count || 0}
+                    </div>
+                </div>
+            `).join('');
+            
+            newsList.innerHTML = newsHtml;
+            updateDebugInfo(`✅ Renderizadas ${news.length} noticias`);
+        }
+        
+        function clearNews() {
+            const newsList = document.getElementById('newsList');
+            newsList.innerHTML = '<p>Noticias limpiadas...</p>';
+            updateDebugInfo('🗑️ Noticias limpiadas');
+        }
+        
+        // Inicializar
+        updateDebugInfo('🚀 Test dashboard iniciado');
+    </script>
+</body>
+</html> 

@@ -15,9 +15,13 @@ async function statsRoutes(fastify, options) {
         200: {
           type: 'object',
           properties: {
-            totalNoticias: { type: 'integer' },
-            totalUsuarios: { type: 'integer' },
-            totalComentarios: { type: 'integer' }
+            totalNews: { type: 'integer' },
+            totalUsers: { type: 'integer' },
+            totalComments: { type: 'integer' },
+            totalCom: { type: 'integer' },
+            totalFeed: { type: 'integer' },
+            totalLikes: { type: 'integer' },
+            totalComComments: { type: 'integer' }
           }
         }
       }
@@ -26,17 +30,31 @@ async function statsRoutes(fastify, options) {
     try {
       // Obtener total de noticias
       const [noticias] = await pool.query('SELECT COUNT(*) as total FROM news');
-      
       // Obtener total de usuarios
       const [usuarios] = await pool.query('SELECT COUNT(*) as total FROM users');
-      
-      // Obtener total de comentarios
+      // Obtener total de comentarios en noticias
       const [comentarios] = await pool.query('SELECT COUNT(*) as total FROM comments');
+      // Obtener total de comunidad
+      const [comunidad] = await pool.query('SELECT COUNT(*) as total FROM com');
+      // Obtener total del feed unificado
+      const [feed] = await pool.query('SELECT COUNT(*) as total FROM content_feed');
+      // Obtener total de likes (noticias + comunidad)
+      const [likes] = await pool.query('SELECT (SELECT COUNT(*) FROM likes) + (SELECT COUNT(*) FROM com_likes) as total');
+      // Obtener total de comentarios de comunidad
+      const [comComments] = await pool.query('SELECT COUNT(*) as total FROM com_comments');
 
+      /**
+       * Respuesta con todos los datos para el dashboard
+       * @type {{ totalNews: number, totalUsers: number, totalComments: number, totalCom: number, totalFeed: number, totalLikes: number, totalComComments: number }}
+       */
       reply.send({
-        totalNoticias: noticias[0].total,
-        totalUsuarios: usuarios[0].total,
-        totalComentarios: comentarios[0].total
+        totalNews: noticias[0].total,
+        totalUsers: usuarios[0].total,
+        totalComments: comentarios[0].total,
+        totalCom: comunidad[0].total,
+        totalFeed: feed[0].total,
+        totalLikes: likes[0].total,
+        totalComComments: comComments[0].total
       });
     } catch (error) {
       request.log.error(error);

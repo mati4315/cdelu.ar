@@ -1,0 +1,130 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/trigamer/diario.trigamer.xyz"
+PassengerBaseURI "/"
+PassengerNodejs "/home/trigamer/nodevenv/diario.trigamer.xyz/20/bin/node"
+PassengerAppType node
+PassengerStartupFile passenger_app.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+
+# Configuración optimizada para CdelU API
+RewriteEngine On
+
+# Configuración de CORS mejorada
+<IfModule mod_headers.c>
+    # CORS headers más completos
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+    Header always set Access-Control-Expose-Headers "X-API-Version, X-Response-Time, X-Total-Count"
+    Header always set Access-Control-Max-Age "86400"
+    
+    # Headers de seguridad
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Permitir solicitudes preflight OPTIONS
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>
+
+# Configuración específica para Passenger
+<IfModule mod_passenger.c>
+    # Configuración de memoria para Passenger
+    PassengerMinInstances 1
+    PassengerMaxInstancesPerApp 2
+    PassengerPoolIdleTime 300
+    PassengerMaxPreloaderIdleTime 0
+    
+    # Variables de entorno para Passenger
+    PassengerAppEnv production
+    PassengerFriendlyErrorPages off
+    PassengerLogLevel 1
+</IfModule>
+
+# Manejo de rutas de API - Passenger maneja esto automáticamente
+# Las siguientes reglas son para archivos estáticos y fallbacks
+
+# Permitir acceso directo a archivos estáticos existentes
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Redirigir solicitudes de archivos estáticos a la carpeta public
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{REQUEST_URI} !^/health
+RewriteCond %{REQUEST_URI} !^/favicon\.ico
+RewriteCond %{REQUEST_URI} !^/robots\.txt
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Comprimir archivos estáticos
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# Caché de navegador optimizado
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Imágenes - caché largo
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS y JavaScript - caché medio
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    
+    # Documentos - caché corto
+    ExpiresByType application/pdf "access plus 1 week"
+    ExpiresByType text/html "access plus 1 hour"
+    
+    # API responses - sin caché
+    ExpiresByType application/json "access plus 0 seconds"
+    
+    # Default
+    ExpiresDefault "access plus 1 day"
+</IfModule>
+
+# Configuración de logs para debugging (opcional)
+<IfModule mod_rewrite.c>
+    # Solo para debugging - puedes comentar estas líneas en producción
+    RewriteCond %{REQUEST_URI} ^/api/v1/
+    RewriteRule .* - [E=DEBUG_URI:%{REQUEST_URI},E=DEBUG_METHOD:%{REQUEST_METHOD}]
+</IfModule>
+
+# Configuración de tipos MIME
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType application/json .json
+    AddType image/svg+xml .svg
+    AddType image/webp .webp
+</IfModule>
+
+# Protección básica de archivos sensibles
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "*.log">
+    Order allow,deny
+    Deny from all
+</Files> 

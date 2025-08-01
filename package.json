@@ -5,16 +5,19 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "start:cpanel": "NODE_ENV=production NODE_OPTIONS=\"--no-wasm --max-old-space-size=512\" UNDICI_WASM=0 UNDICI_DISABLE_WASM=true node passenger_app.js",
-    "start:safe": "NODE_OPTIONS=\"--no-wasm --max-old-space-size=512\" UNDICI_WASM=0 node passenger_app.js",
-    "start:minimal": "NODE_OPTIONS=\"--no-wasm --max-old-space-size=512\" UNDICI_WASM=0 node src/index.minimal.js",
+    "start:cpanel": "NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=512\" UNDICI_WASM=0 UNDICI_DISABLE_WASM=true node passenger_app.js",
+    "start:safe": "NODE_OPTIONS=\"--max-old-space-size=512\" UNDICI_WASM=0 node passenger_app.js",
+    "start:minimal": "NODE_OPTIONS=\"--max-old-space-size=512\" UNDICI_WASM=0 node src/index.minimal.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
     "import-news": "node src/scripts/import-latest-news.js",
     "delete-news": "node src/scripts/delete-all-news.js",
     "check": "node src/startup-check.js",
     "safe-start": "npm run check && npm start",
-    "safe-dev": "npm run check && npm run dev"
+    "safe-dev": "npm run check && npm run dev",
+    "migrate-feed": "node src/scripts/migrate-feed.js",
+    "migrate-feed:force": "node src/scripts/migrate-feed.js --force",
+    "sync-feed": "node src/scripts/migrate-feed.js --sync"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -24,7 +27,7 @@
   },
   "nodemonConfig": {
     "env": {
-      "NODE_OPTIONS": "--no-wasm --max-old-space-size=512",
+      "NODE_OPTIONS": "--max-old-space-size=512",
       "UNDICI_WASM": "0",
       "UNDICI_DISABLE_WASM": "true"
     }
@@ -39,11 +42,14 @@
     "@fastify/swagger-ui": "^5.0.1",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "axios": "^1.8.4",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.3.1",
     "fastify": "^5.3.2",
     "fluent-ffmpeg": "^2.1.3",
+    "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.0",
+    "node-fetch": "^2.7.0",
     "rss-parser": "^3.13.0",
     "sharp": "^0.34.2",
     "undici": "^5.28.4"

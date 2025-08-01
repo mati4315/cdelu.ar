@@ -19,11 +19,11 @@ async function authenticate(request, reply) {
 function authorize(roles) {
   return async (request, reply) => {
     try {
-      if (!request.user || !request.user.role) {
+      if (!request.user || !request.user.rol) {
         return reply.status(401).send({ error: 'No autorizado' });
       }
 
-      if (!roles.includes(request.user.role)) {
+      if (!roles.includes(request.user.rol)) {
         return reply.status(403).send({ error: 'No tienes permiso para realizar esta acción' });
       }
     } catch (err) {

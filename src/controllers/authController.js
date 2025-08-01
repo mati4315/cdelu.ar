@@ -8,7 +8,7 @@ const pool = require('../config/database');
  */
 async function register(request, reply) {
   try {
-    const { nombre, email, password, role = 'usuario' } = request.body;
+    const { nombre, email, password, rol = 'usuario' } = request.body;
 
     // Verificar si el usuario ya existe
     const [existingUser] = await pool.query(
@@ -23,28 +23,18 @@ async function register(request, reply) {
     // Hashear la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Obtener el rol especificado
-    const [roles] = await pool.query(
-      'SELECT id FROM roles WHERE nombre = ?',
-      [role]
-    );
-
-    if (roles.length === 0) {
-      return reply.status(400).send({ error: 'Rol no válido' });
-    }
-
     // Insertar el nuevo usuario
     const [result] = await pool.query(
-      `INSERT INTO users (nombre, email, password, role_id) 
+      `INSERT INTO users (nombre, email, password, rol) 
        VALUES (?, ?, ?, ?)`,
-      [nombre, email, hashedPassword, roles[0].id]
+      [nombre, email, hashedPassword, rol]
     );
 
     // Generar token JWT
     const token = await reply.jwtSign({
       id: result.insertId,
       email,
-      role
+      rol
     });
 
     reply.status(201).send({
@@ -53,7 +43,7 @@ async function register(request, reply) {
         id: result.insertId,
         nombre,
         email,
-        role
+        rol
       }
     });
   } catch (error) {
@@ -71,24 +61,32 @@ async function login(request, reply) {
   try {
     const { email, password } = request.body;
 
+    console.log('🔐 Intento de login:', { email, password: password ? '***' : 'undefined' });
+
     // Buscar usuario por email
     const [users] = await pool.query(
-      `SELECT u.*, r.nombre as role 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.id 
-       WHERE u.email = ?`,
+      `SELECT id, nombre, email, password, rol, created_at
+       FROM users 
+       WHERE email = ?`,
       [email]
     );
 
+    console.log('👥 Usuarios encontrados:', users.length);
+
     if (users.length === 0) {
+      console.log('❌ Usuario no encontrado');
       return reply.status(401).send({ error: 'Credenciales inválidas' });
     }
 
     const user = users[0];
+    console.log('👤 Usuario encontrado:', { id: user.id, nombre: user.nombre, rol: user.rol });
 
     // Verificar contraseña
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log('🔍 Verificación de contraseña:', validPassword);
+
     if (!validPassword) {
+      console.log('❌ Contraseña inválida');
       return reply.status(401).send({ error: 'Credenciales inválidas' });
     }
 
@@ -96,26 +94,96 @@ async function login(request, reply) {
     const token = await reply.jwtSign({
       id: user.id,
       email: user.email,
-      role: user.role
+      rol: user.rol
     });
 
-    // Enviar respuesta con token y datos del usuario
-    return reply.send({
+    console.log('✅ Login exitoso, token generado');
+
+    reply.send({
       token,
       user: {
         id: user.id,
         nombre: user.nombre,
         email: user.email,
-        role: user.role
+        rol: user.rol
       }
     });
   } catch (error) {
+    console.error('❌ Error en login:', error);
     request.log.error(error);
-    return reply.status(500).send({ error: 'Error al iniciar sesión' });
+    reply.status(500).send({ error: 'Error al iniciar sesión' });
+  }
+}
+
+/**
+ * Obtiene el perfil del usuario actual
+ * @param {Object} request - Objeto de solicitud Fastify
+ * @param {Object} reply - Objeto de respuesta Fastify
+ */
+async function getProfile(request, reply) {
+  try {
+    const userId = request.user.id;
+
+    const [users] = await pool.query(
+      `SELECT id, nombre, email, rol, created_at 
+       FROM users 
+       WHERE id = ?`,
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return reply.status(404).send({ error: 'Usuario no encontrado' });
+    }
+
+    reply.send({ user: users[0] });
+  } catch (error) {
+    request.log.error(error);
+    reply.status(500).send({ error: 'Error al obtener el perfil' });
+  }
+}
+
+/**
+ * Actualiza el perfil del usuario
+ * @param {Object} request - Objeto de solicitud Fastify
+ * @param {Object} reply - Objeto de respuesta Fastify
+ */
+async function updateProfile(request, reply) {
+  try {
+    const userId = request.user.id;
+    const { nombre, email } = request.body;
+
+    // Verificar si el email ya está en uso por otro usuario
+    if (email) {
+      const [existingUser] = await pool.query(
+        'SELECT id FROM users WHERE email = ? AND id != ?',
+        [email, userId]
+      );
+
+      if (existingUser.length > 0) {
+        return reply.status(400).send({ error: 'El email ya está en uso' });
+      }
+    }
+
+    // Actualizar usuario
+    const [result] = await pool.query(
+      'UPDATE users SET nombre = ?, email = ? WHERE id = ?',
+      [nombre, email, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return reply.status(404).send({ error: 'Usuario no encontrado' });
+    }
+
+    reply.send({ message: 'Perfil actualizado correctamente' });
+  } catch (error) {
+    request.log.error(error);
+    reply.status(500).send({ error: 'Error al actualizar el perfil' });
   }
 }
 
 module.exports = {
   register,
-  login
+  login,
+  getProfile,
+  updateProfile
 }; 

@@ -8,8 +8,28 @@ const { generateSummary, generateTitle } = require('../services/aiService');
  */
 async function getNews(request, reply) {
   try {
-    const { page = 1, limit = 10 } = request.query;
+    const { page = 1, limit = 10, sort = 'created_at', order = 'desc' } = request.query;
     const offset = (page - 1) * limit;
+
+    // Validar parámetros de ordenamiento
+    const allowedSortFields = ['titulo', 'created_at', 'likes_count', 'comments_count'];
+    const allowedOrders = ['asc', 'desc'];
+    
+    const sortField = allowedSortFields.includes(sort) ? sort : 'created_at';
+    const sortOrder = allowedOrders.includes(order) ? order : 'desc';
+
+    // Construir la consulta SQL con ordenamiento dinámico
+    let orderByClause = 'ORDER BY n.created_at DESC';
+    
+    if (sortField === 'titulo') {
+      orderByClause = `ORDER BY n.titulo ${sortOrder.toUpperCase()}`;
+    } else if (sortField === 'created_at') {
+      orderByClause = `ORDER BY n.created_at ${sortOrder.toUpperCase()}`;
+    } else if (sortField === 'likes_count') {
+      orderByClause = `ORDER BY likes_count ${sortOrder.toUpperCase()}`;
+    } else if (sortField === 'comments_count') {
+      orderByClause = `ORDER BY comments_count ${sortOrder.toUpperCase()}`;
+    }
 
     // Obtener noticias con información de likes y comentarios
     const [news] = await pool.query(`
@@ -23,7 +43,7 @@ async function getNews(request, reply) {
       LEFT JOIN likes l ON n.id = l.news_id
       LEFT JOIN comments c ON n.id = c.news_id
       GROUP BY n.id
-      ORDER BY n.created_at DESC
+      ${orderByClause}
       LIMIT ? OFFSET ?
     `, [limit, offset]);
 

@@ -1,0 +1,42 @@
+{
+  "name": "cdelu",
+  "version": "1.0.0",
+  "description": "API REST para un diario online con Fastify y MySQL",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "import-news": "node src/scripts/import-latest-news.js",
+    "delete-news": "node src/scripts/delete-all-news.js",
+    "check": "node src/startup-check.js",
+    "safe-start": "npm run check && npm start",
+    "safe-dev": "npm run check && npm run dev"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.0.1",
+    "@fastify/helmet": "^13.0.1",
+    "@fastify/jwt": "^9.1.0",
+    "@fastify/multipart": "^9.0.3",
+    "@fastify/static": "^8.1.1",
+    "@fastify/swagger": "^9.5.0",
+    "@fastify/swagger-ui": "^5.0.1",
+    "axios": "^1.8.4",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "fastify": "^5.3.2",
+    "mysql2": "^3.14.0",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.11",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "optionalDependencies": {},
+  "peerDependencies": {}
+} 

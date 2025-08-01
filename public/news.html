@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CdelU - Gestión de Noticias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --border-radius-sm: 6px;
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* === VARIABLES DE TEMA OSCURO === */
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --bg-elevated: #212121;
+            --bg-surface: #2a2a2a;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #e5e5e5;
+            --text-tertiary: #a3a3a3;
+            --text-muted: #737373;
+            
+            --border-primary: #262626;
+            --border-secondary: #404040;
+            
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-hover: #4f46e5;
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            --sidebar-bg: linear-gradient(180deg, #111111 0%, #0a0a0a 100%);
+            --card-bg: #1a1a1a;
+            --input-bg: #262626;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* === ESTILOS BASE === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* === LAYOUT === */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-primary);
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+        
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        /* === CARDS === */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 1.5rem 2rem;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .card-header h3 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .card-body {
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+        
+        /* === FORMULARIOS === */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            transition: var(--transition);
+            font-size: 0.875rem;
+            width: 100%;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* === BOTONES === */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--hover-bg);
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8125rem;
+        }
+        
+        /* === NEWS LIST === */
+        .news-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: var(--transition);
+            cursor: pointer;
+            min-height: 100px;
+            position: relative;
+        }
+        
+        .news-item:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow);
+        }
+        
+        .news-item.selected {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .news-checkbox {
+            margin-right: 1rem;
+        }
+        
+        .news-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .news-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            flex: 1;
+        }
+        
+        .news-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        
+        .news-content {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .news-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .news-stats {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        
+        .news-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        /* === UTILS === */
+        .d-flex { display: flex; }
+        .align-items-center { align-items: center; }
+        .justify-content-between { justify-content: space-between; }
+        .gap-2 { gap: 1rem; }
+        .mb-4 { margin-bottom: 2rem; }
+        .mt-3 { margin-top: 1rem; }
+        .text-center { text-align: center; }
+        .text-muted { color: var(--text-muted); }
+        
+        /* === LOADING === */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-primary);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* === NOTIFICACIONES === */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            padding: 1rem 1.5rem;
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: var(--transition);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification-success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .notification-error {
+            border-left: 4px solid var(--error);
+        }
+        
+        .notification-warning {
+            border-left: 4px solid var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/dashboard.html" class="logo">
+                    <div class="logo-icon">
+                        <i class="bi bi-newspaper"></i>
+                    </div>
+                    <h1 class="logo-text">CdelU - Gestión de Noticias</h1>
+                </a>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline btn-sm" onclick="logout()">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="container">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-newspaper"></i>
+                <h3>Gestión de Noticias</h3>
+            </div>
+            <div class="card-body">
+                <!-- Controles de acción -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" id="addNewsBtn">
+                            <i class="bi bi-plus-circle"></i>
+                            Nueva Noticia
+                        </button>
+                        <button class="btn btn-outline" id="deleteSelectedBtn" style="display: none;">
+                            <i class="bi bi-trash"></i>
+                            Eliminar Seleccionadas
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <select class="form-control" id="sortSelect" style="width: auto;">
+                            <option value="created_at">Fecha</option>
+                            <option value="titulo">Título</option>
+                            <option value="likes_count">Likes</option>
+                            <option value="comments_count">Comentarios</option>
+                        </select>
+                        <select class="form-control" id="orderSelect" style="width: auto;">
+                            <option value="desc">Descendente</option>
+                            <option value="asc">Ascendente</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Lista de noticias -->
+                <div id="newsList">
+                    <div class="text-center">
+                        <div class="loading-spinner"></div>
+                        <p class="text-muted mt-2">Cargando noticias...</p>
+                    </div>
+                </div>
+                
+                <!-- Paginación -->
+                <div class="d-flex justify-content-between align-items-center mt-4" id="pagination">
+                    <div class="text-muted">
+                        <span id="paginationInfo">Mostrando 0 de 0 noticias</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline btn-sm" id="prevPage" disabled>
+                            <i class="bi bi-chevron-left"></i>
+                            Anterior
+                        </button>
+                        <span class="d-flex align-items-center px-3">
+                            <span id="currentPage">1</span> de <span id="totalPages">1</span>
+                        </span>
+                        <button class="btn btn-outline btn-sm" id="nextPage" disabled>
+                            Siguiente
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <div class="notification-content"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let currentNewsPage = 1;
+        let currentNewsLimit = 10;
+        let currentNewsSort = 'created_at';
+        let currentNewsOrder = 'desc';
+        let selectedNewsIds = new Set();
+        let editingNewsId = null;
+        
+        // Elementos del DOM
+        const addNewsBtn = document.getElementById('addNewsBtn');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const sortSelect = document.getElementById('sortSelect');
+        const orderSelect = document.getElementById('orderSelect');
+        const prevPage = document.getElementById('prevPage');
+        const nextPage = document.getElementById('nextPage');
+        
+        // Función para verificar autenticación
+        function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/dashboard.html';
+                return false;
+            }
+            return true;
+        }
+        
+        // Función para mostrar notificaciones
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const content = notification.querySelector('.notification-content');
+            
+            notification.classList.remove('notification-success', 'notification-error', 'notification-warning');
+            notification.classList.add(`notification-${type}`);
+            
+            content.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Función para cargar noticias
+        async function loadNews() {
+            if (!checkAuth()) return;
+            
+            const token = localStorage.getItem('authToken');
+            console.log('Cargando noticias...');
+            
+            const newsList = document.getElementById('newsList');
+            newsList.innerHTML = `
+                <div class="text-center">
+                    <div class="loading-spinner"></div>
+                    <p class="text-muted mt-2">Cargando noticias...</p>
+                </div>
+            `;
+            
+            const params = new URLSearchParams({
+                page: currentNewsPage,
+                limit: currentNewsLimit,
+                sort: currentNewsSort,
+                order: currentNewsOrder
+            });
+            
+            try {
+                const response = await fetch(`/api/v1/news?${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/dashboard.html';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Datos recibidos:', data);
+                
+                if (data && data.data) {
+                    renderNewsList(data.data);
+                    updatePagination(data.pagination);
+                } else {
+                    showNotification('Error: Datos inválidos recibidos del servidor', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading news:', error);
+                showNotification('Error de conexión al cargar noticias', 'error');
+            }
+        }
+        
+        // Función para renderizar lista de noticias
+        function renderNewsList(news) {
+            console.log('Renderizando lista de noticias:', news.length, 'noticias');
+            const newsList = document.getElementById('newsList');
+            
+            if (news.length === 0) {
+                newsList.innerHTML = `
+                    <div class="text-center">
+                        <i class="bi bi-newspaper" style="font-size: 3rem; color: var(--text-muted);"></i>
+                        <p class="text-muted mt-2">No hay noticias disponibles</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            console.log('Generando HTML para', news.length, 'noticias');
+            const newsHtml = news.map(item => {
+                console.log('Procesando noticia:', item.id, item.titulo);
+                return `
+                <div class="news-item ${selectedNewsIds.has(item.id) ? 'selected' : ''}" data-news-id="${item.id}">
+                    <div class="news-header">
+                        <input type="checkbox" class="news-checkbox" ${selectedNewsIds.has(item.id) ? 'checked' : ''}>
+                        <h4 class="news-title">${escapeHtml(item.titulo)}</h4>
+                    </div>
+                    
+                    <div class="news-meta">
+                        <span><i class="bi bi-calendar"></i> ${formatDate(item.created_at)}</span>
+                        <span><i class="bi bi-person"></i> ${item.autor || 'Anónimo'}</span>
+                        <span><i class="bi bi-star"></i> ${item.is_oficial ? 'Oficial' : 'Usuario'}</span>
+                    </div>
+                    
+                    <div class="news-content">
+                        ${escapeHtml(truncateText(item.descripcion, 200))}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="news-stats">
+                            <div class="news-stat">
+                                <i class="bi bi-hand-thumbs-up"></i>
+                                <span>${item.likes_count || 0}</span>
+                            </div>
+                            <div class="news-stat">
+                                <i class="bi bi-chat-dots"></i>
+                                <span>${item.comments_count || 0}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="news-actions">
+                            <button class="btn btn-outline btn-sm" onclick="editNews(${item.id})">
+                                <i class="bi bi-pencil"></i>
+                                Editar
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="deleteNews(${item.id})">
+                                <i class="bi bi-trash"></i>
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }).join('');
+            
+            console.log('HTML generado, aplicando al DOM');
+            newsList.innerHTML = newsHtml;
+            console.log('Contenido aplicado al DOM. Elementos news-item:', newsList.querySelectorAll('.news-item').length);
+            
+            // Add event listeners for checkboxes
+            newsList.querySelectorAll('.news-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const newsId = parseInt(this.closest('.news-item').dataset.newsId);
+                    if (this.checked) {
+                        selectedNewsIds.add(newsId);
+                        this.closest('.news-item').classList.add('selected');
+                    } else {
+                        selectedNewsIds.delete(newsId);
+                        this.closest('.news-item').classList.remove('selected');
+                    }
+                    updateDeleteButton();
+                });
+            });
+        }
+        
+        // Función para actualizar paginación
+        function updatePagination(pagination) {
+            document.getElementById('currentPage').textContent = pagination.page;
+            document.getElementById('totalPages').textContent = pagination.totalPages;
+            document.getElementById('paginationInfo').textContent = 
+                `Mostrando ${((pagination.page - 1) * pagination.limit) + 1} a ${Math.min(pagination.page * pagination.limit, pagination.total)} de ${pagination.total} noticias`;
+            
+            prevPage.disabled = pagination.page <= 1;
+            nextPage.disabled = pagination.page >= pagination.totalPages;
+        }
+        
+        // Función para actualizar botón de eliminar
+        function updateDeleteButton() {
+            deleteSelectedBtn.style.display = selectedNewsIds.size > 0 ? 'block' : 'none';
+        }
+        
+        // Funciones de utilidad
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function truncateText(text, maxLength) {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Funciones de gestión de noticias
+        function addNews() {
+            showNotification('Función de agregar noticia próximamente', 'info');
+        }
+        
+        function editNews(newsId) {
+            showNotification(`Función de editar noticia ${newsId} próximamente`, 'info');
+        }
+        
+        function deleteNews(newsId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta noticia?')) return;
+            showNotification(`Función de eliminar noticia ${newsId} próximamente`, 'info');
+        }
+        
+        function deleteSelectedNews() {
+            if (selectedNewsIds.size === 0) return;
+            if (!confirm(`¿Estás seguro de que quieres eliminar ${selectedNewsIds.size} noticia(s)?`)) return;
+            showNotification(`Función de eliminar múltiples noticias próximamente`, 'info');
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            window.location.href = '/dashboard.html';
+        }
+        
+        // Event listeners
+        addNewsBtn.addEventListener('click', addNews);
+        deleteSelectedBtn.addEventListener('click', deleteSelectedNews);
+        
+        sortSelect.addEventListener('change', function() {
+            currentNewsSort = this.value;
+            currentNewsPage = 1;
+            loadNews();
+        });
+        
+        orderSelect.addEventListener('change', function() {
+            currentNewsOrder = this.value;
+            currentNewsPage = 1;
+            loadNews();
+        });
+        
+        prevPage.addEventListener('click', function() {
+            if (currentNewsPage > 1) {
+                currentNewsPage--;
+                loadNews();
+            }
+        });
+        
+        nextPage.addEventListener('click', function() {
+            currentNewsPage++;
+            loadNews();
+        });
+        
+        // Inicializar
+        if (checkAuth()) {
+            loadNews();
+        }
+    </script>
+</body>
+</html> 

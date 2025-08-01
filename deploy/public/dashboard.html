@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CdelU - Dashboard Administrativo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --border-radius-sm: 6px;
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* === VARIABLES DE TEMA OSCURO === */
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --bg-elevated: #212121;
+            --bg-surface: #2a2a2a;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #e5e5e5;
+            --text-tertiary: #a3a3a3;
+            --text-muted: #737373;
+            
+            --border-primary: #262626;
+            --border-secondary: #404040;
+            
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-hover: #4f46e5;
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            --sidebar-bg: linear-gradient(180deg, #111111 0%, #0a0a0a 100%);
+            --card-bg: #1a1a1a;
+            --input-bg: #262626;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* === VARIABLES DE TEMA CLARO === */
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-elevated: #ffffff;
+            --bg-surface: #f8fafc;
+            
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --text-tertiary: #64748b;
+            --text-muted: #94a3b8;
+            
+            --border-primary: #e2e8f0;
+            --border-secondary: #cbd5e1;
+            
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-hover: #4f46e5;
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            --sidebar-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --hover-bg: rgba(0, 0, 0, 0.05);
+        }
+        
+        /* === ESTILOS BASE === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* === LAYOUT === */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border-primary);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+        
+        .sidebar-header {
+            padding: 2rem 1.5rem 1.5rem;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-primary);
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+        
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .nav-menu {
+            flex: 1;
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+        }
+        
+        .nav-group {
+            margin-bottom: 2rem;
+        }
+        
+        .nav-group-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding: 0 0.75rem;
+        }
+        
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+            font-weight: 500;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+        
+        .nav-link.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: white;
+            border-radius: 2px;
+        }
+        
+        .nav-icon {
+            font-size: 1.125rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .top-bar {
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .theme-toggle {
+            position: relative;
+            width: 48px;
+            height: 28px;
+        }
+        
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--border-secondary);
+            transition: var(--transition);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+        }
+        
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            background: var(--bg-elevated);
+            transition: var(--transition);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+        }
+        
+        input:checked + .theme-slider {
+            background: var(--accent-primary);
+        }
+        
+        input:checked + .theme-slider:before {
+            transform: translateX(20px);
+        }
+        
+        .theme-icon {
+            position: absolute;
+            font-size: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: var(--transition);
+        }
+        
+        .theme-icon.sun {
+            right: 6px;
+            color: var(--warning);
+        }
+        
+        .theme-icon.moon {
+            left: 6px;
+            color: var(--text-muted);
+        }
+        
+        input:checked + .theme-slider .theme-icon.sun {
+            opacity: 0;
+        }
+        
+        input:not(:checked) + .theme-slider .theme-icon.moon {
+            opacity: 0;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        /* === CARDS === */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 1.5rem 2rem;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .card-header h3 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .card-body {
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+        
+        /* === FORMULARIOS === */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            transition: var(--transition);
+            font-size: 0.875rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* === BOTONES === */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-secondary);
+            color: var(--text-primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--hover-bg);
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8125rem;
+        }
+        
+        /* === TABLAS === */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .table {
+            margin: 0;
+            background: transparent;
+        }
+        
+        .table th {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-primary);
+            font-weight: 600;
+            color: var(--text-primary);
+            padding: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+        
+        .table tbody tr:hover {
+            background: var(--hover-bg);
+        }
+        
+        /* === ESTADOS === */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+        
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+        }
+        
+        /* === LOADING === */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-primary);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* === RESPONSIVE === */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                opacity: 0;
+                visibility: hidden;
+                transition: var(--transition);
+            }
+            
+            .mobile-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            .mobile-menu-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                border: none;
+                background: var(--hover-bg);
+                border-radius: var(--border-radius);
+                color: var(--text-primary);
+                cursor: pointer;
+            }
+            
+            .content-area {
+                padding: 1rem;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .mobile-menu-btn {
+                display: none;
+            }
+        }
+        
+        /* === ANIMACIONES === */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* === LOGIN MODAL === */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(8px);
+        }
+        
+        .login-form {
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header h2 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* === NOTIFICACIONES === */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            padding: 1rem 1.5rem;
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: var(--transition);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification-success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .notification-error {
+            border-left: 4px solid var(--error);
+        }
+        
+        .notification-warning {
+            border-left: 4px solid var(--warning);
+        }
+        
+        /* === UTILS === */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mb-0 { margin-bottom: 0; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mb-4 { margin-bottom: 2rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .d-none { display: none; }
+        .d-block { display: block; }
+        .d-flex { display: flex; }
+        .align-items-center { align-items: center; }
+        .justify-content-between { justify-content: space-between; }
+        .gap-2 { gap: 1rem; }
+        .w-100 { width: 100%; }
+    </style>
+</head>
+<body>
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="logo">
+                    <div class="logo-icon">
+                        <i class="bi bi-newspaper"></i>
+                    </div>
+                    <h1 class="logo-text">CdelU</h1>
+                </a>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-group">
+                    <div class="nav-group-title">Panel Principal</div>
+                    <div class="nav-item">
+                        <a href="#dashboard" class="nav-link active" data-tab="dashboard">
+                            <i class="nav-icon bi bi-speedometer2"></i>
+                            Dashboard
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#news" class="nav-link" data-tab="news">
+                            <i class="nav-icon bi bi-newspaper"></i>
+                            Noticias
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#users" class="nav-link" data-tab="users">
+                            <i class="nav-icon bi bi-people"></i>
+                            Usuarios
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-group">
+                    <div class="nav-group-title">Herramientas</div>
+                    <div class="nav-item">
+                        <a href="#stats" class="nav-link" data-tab="stats">
+                            <i class="nav-icon bi bi-graph-up"></i>
+                            Estadísticas
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#api-docs" class="nav-link" data-tab="api-docs">
+                            <i class="nav-icon bi bi-code-square"></i>
+                            API Docs
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#communication" class="nav-link" data-tab="communication">
+                            <i class="nav-icon bi bi-chat-dots"></i>
+                            Comunicaciones
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-group">
+                    <div class="nav-group-title">Sistema</div>
+                    <div class="nav-item">
+                        <a href="#health" class="nav-link" data-tab="health">
+                            <i class="nav-icon bi bi-heart-pulse"></i>
+                            Estado del Sistema
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                </div>
+                
+                <div class="top-bar-actions">
+                    <label class="theme-toggle">
+                        <input type="checkbox" id="themeToggle">
+                        <span class="theme-slider">
+                            <i class="theme-icon sun bi bi-sun-fill"></i>
+                            <i class="theme-icon moon bi bi-moon-fill"></i>
+                        </span>
+                    </label>
+                    
+                    <button class="btn btn-outline btn-sm" id="logoutBtn">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Dashboard Tab -->
+                <div class="tab-content fade-in" id="dashboard-content">
+                    <div class="row g-4 mb-4">
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Total Noticias</h6>
+                                        <i class="bi bi-newspaper text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="total-news">-</h2>
+                                    <small class="text-muted">Publicadas</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Total Usuarios</h6>
+                                        <i class="bi bi-people text-success" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="total-users">-</h2>
+                                    <small class="text-muted">Registrados</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Comentarios</h6>
+                                        <i class="bi bi-chat-dots text-warning" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="total-comments">-</h2>
+                                    <small class="text-muted">Este mes</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Estado</h6>
+                                        <i class="bi bi-heart-pulse text-error" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <span class="status-badge status-success">
+                                        <i class="bi bi-check-circle"></i>
+                                        Online
+                                    </span>
+                                    <small class="text-muted d-block mt-1">Servidor activo</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="bi bi-graph-up"></i>
+                                    <h3>Actividad Reciente</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">Próximamente: Gráficos de actividad y métricas en tiempo real.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-lg-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <i class="bi bi-clock"></i>
+                                    <h3>Acciones Rápidas</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-column gap-2">
+                                        <button class="btn btn-primary" data-tab="news">
+                                            <i class="bi bi-plus-circle"></i>
+                                            Nueva Noticia
+                                        </button>
+                                        <button class="btn btn-outline" data-tab="users">
+                                            <i class="bi bi-person-plus"></i>
+                                            Gestionar Usuarios
+                                        </button>
+                                        <a href="/api/v1/docs" class="btn btn-outline" target="_blank">
+                                            <i class="bi bi-book"></i>
+                                            Ver Documentación
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Login Modal -->
+                <div class="login-modal" id="loginModal" style="display: none;">
+                    <form class="login-form" id="loginForm">
+                        <div class="login-header">
+                            <h2>Iniciar Sesión</h2>
+                            <p>Accede al panel administrativo de CdelU</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required placeholder="tu@email.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 mb-3">
+                            <span class="login-text">Iniciar Sesión</span>
+                            <span class="loading-spinner d-none"></span>
+                        </button>
+                        
+                        <div class="text-center">
+                            <small class="text-muted">
+                                ¿No tienes cuenta? Contacta al administrador.
+                            </small>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Notification -->
+                <div class="notification" id="notification">
+                    <div class="notification-content"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // === THEME MANAGEMENT ===
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.checked = savedTheme === 'light';
+        
+        themeToggle.addEventListener('change', function() {
+            const newTheme = this.checked ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+        
+        // === MOBILE MENU ===
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        
+        mobileMenuBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            mobileOverlay.classList.toggle('show');
+        });
+        
+        mobileOverlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.remove('show');
+        });
+        
+        // === NAVIGATION ===
+        const navLinks = document.querySelectorAll('[data-tab]');
+        const pageTitle = document.getElementById('pageTitle');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                navLinks.forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Update page title
+                const tabName = this.textContent.trim();
+                pageTitle.textContent = tabName;
+                
+                // Close mobile menu
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.remove('show');
+                
+                // Show corresponding content (placeholder for now)
+                showTabContent(this.dataset.tab);
+            });
+        });
+        
+        function showTabContent(tabName) {
+            // Hide all tab contents
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Show specific content or dashboard by default
+            const targetContent = document.getElementById(`${tabName}-content`) || document.getElementById('dashboard-content');
+            if (targetContent) {
+                targetContent.style.display = 'block';
+                targetContent.classList.add('fade-in');
+            }
+        }
+        
+        // === NOTIFICATIONS ===
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const content = notification.querySelector('.notification-content');
+            
+            // Remove existing type classes
+            notification.classList.remove('notification-success', 'notification-error', 'notification-warning');
+            
+            // Add new type class
+            notification.classList.add(`notification-${type}`);
+            
+            // Set content
+            content.textContent = message;
+            
+            // Show notification
+            notification.classList.add('show');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // === LOGIN HANDLING ===
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        // Check if user is logged in
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            loginModal.style.display = 'flex';
+        }
+        
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginText = document.querySelector('.login-text');
+            const loadingSpinner = document.querySelector('.loading-spinner');
+            
+            // Show loading
+            loginText.classList.add('d-none');
+            loadingSpinner.classList.remove('d-none');
+            
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                    loginModal.style.display = 'none';
+                    showNotification('¡Bienvenido al dashboard!', 'success');
+                    loadDashboardData();
+                } else {
+                    showNotification(data.message || 'Error al iniciar sesión', 'error');
+                }
+            } catch (error) {
+                showNotification('Error de conexión', 'error');
+            } finally {
+                loginText.classList.remove('d-none');
+                loadingSpinner.classList.add('d-none');
+            }
+        });
+        
+        logoutBtn.addEventListener('click', function() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            location.reload();
+        });
+        
+        // === DASHBOARD DATA ===
+        async function loadDashboardData() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            
+            try {
+                // Load stats
+                const statsResponse = await fetch('/api/v1/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    
+                    // Update dashboard cards
+                    document.getElementById('total-news').textContent = stats.totalNews || '0';
+                    document.getElementById('total-users').textContent = stats.totalUsers || '0';
+                    document.getElementById('total-comments').textContent = stats.totalComments || '0';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+        
+        // Load dashboard data on page load
+        if (token) {
+            loadDashboardData();
+        }
+        
+        // === QUICK ACTIONS ===
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            if (btn.tagName === 'BUTTON') {
+                btn.addEventListener('click', function() {
+                    const tab = this.dataset.tab;
+                    showNotification(`Navegando a ${tab}...`, 'info');
+                    // Here you would implement the actual navigation logic
+                });
+            }
+        });
+        
+        // Initialize
+        showTabContent('dashboard');
+    </script>
+</body>
+</html>
