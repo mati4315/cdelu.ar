@@ -9,6 +9,7 @@ const comRoutes = require('./routes/com.routes.js');
 const docsRoutes = require('./routes/docs.routes.js');
 const feedRoutes = require('./routes/feed.routes.js');
 const mobileRoutes = require('./routes/mobile.routes.js');
+const adsRoutes = require('./routes/ads.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
@@ -261,6 +262,7 @@ fastify.register(comRoutes);
 fastify.register(docsRoutes);
 fastify.register(feedRoutes);
 fastify.register(mobileRoutes);
+fastify.register(adsRoutes);
 
 // Ruta específica para el dashboard (opcional)
 fastify.get('/dashboard', async (request, reply) => {
@@ -294,7 +296,9 @@ fastify.addHook('onRequest', async (request, reply) => {
         '/favicon.ico',
         '/api/v1/docs',  // Añadido para permitir acceso a Swagger UI
         '/api/v1/health', // Endpoint de health check
-        '/api/v1/mobile/' // Endpoints móviles (todos públicos)
+        '/api/v1/mobile/', // Endpoints móviles (todos públicos)
+        '/api/v1/ads/active', // Endpoint público para anuncios activos
+        '/api/v1/ads/' // Endpoints de tracking de anuncios (públicos)
     ];
     
     // Verificar si es una ruta pública

@@ -12,7 +12,8 @@ async function getFeed(request, reply) {
       limit = 10, 
       type, 
       sort = 'published_at', 
-      order = 'desc' 
+      order = 'desc',
+      includeAds = false // Nuevo parámetro para incluir publicidad
     } = request.query;
 
     const offset = (page - 1) * limit;
@@ -115,11 +116,61 @@ async function getFeed(request, reply) {
 
     const [rows] = await pool.execute(query, finalParams);
 
-    // Convertir is_liked de 0/1 a boolean
-    const formattedRows = rows.map(row => ({
+    // Convertir is_liked de 0/1 a boolean y marcar anuncios originales
+    let formattedRows = rows.map(row => ({
       ...row,
-      is_liked: Boolean(row.is_liked)
+      is_liked: Boolean(row.is_liked),
+      is_ad: row.type === 3 // Marcar anuncios originales
     }));
+
+    // Si se solicita incluir publicidad, mezclar anuncios
+    if (includeAds === 'true' || includeAds === true) {
+      try {
+        // Obtener anuncios activos
+        const [adsResult] = await pool.execute(`
+          SELECT 
+            cf.id,
+            cf.titulo,
+            cf.descripcion,
+            cf.resumen,
+            cf.image_url,
+            cf.type,
+            cf.original_id,
+            cf.user_id,
+            cf.user_name,
+            cf.published_at,
+            cf.created_at,
+            cf.updated_at,
+            cf.original_url,
+            cf.is_oficial,
+            cf.video_url,
+            cf.likes_count,
+            cf.comments_count,
+            0 as is_liked
+          FROM content_feed cf
+          WHERE cf.type = 3 AND cf.is_oficial = TRUE
+          ORDER BY RAND()
+          LIMIT 10
+        `);
+
+        const ads = adsResult.map(ad => ({
+          ...ad,
+          is_liked: false, // Los anuncios no tienen likes
+          is_ad: true // Marcar como anuncio mezclado
+        }));
+
+        console.log(`🔍 Anuncios obtenidos para mezcla: ${ads.length}`);
+        ads.forEach((ad, index) => {
+          console.log(`   ${index + 1}. ID: ${ad.id}, Título: ${ad.titulo}, is_ad: ${ad.is_ad}`);
+        });
+
+        // Mezclar anuncios con contenido
+        formattedRows = mixAdsWithContent(formattedRows, ads);
+      } catch (error) {
+        console.error('Error al obtener anuncios para el feed:', error);
+        // Continuar sin anuncios si hay error
+      }
+    }
 
     // Calcular páginas totales
     const totalPages = Math.ceil(total / limit);
@@ -352,6 +403,62 @@ async function syncFeed(request, reply) {
       message: error.message
     });
   }
+}
+
+/**
+ * Función para mezclar anuncios con contenido del feed
+ * @param {Array} content - Array de contenido del feed
+ * @param {Array} ads - Array de anuncios
+ * @returns {Array} - Array mezclado
+ */
+function mixAdsWithContent(content, ads) {
+  if (!ads || ads.length === 0) {
+    console.log('⚠️ No hay anuncios para mezclar');
+    return content;
+  }
+  
+  console.log(`🔄 Iniciando mezcla: ${content.length} posts + ${ads.length} anuncios`);
+  
+  const mixedContent = [];
+  const adsCopy = [...ads]; // Copia para no modificar el original
+  let adIndex = 0;
+  let postCount = 0;
+  
+  // Rango de posts entre anuncios (4-7)
+  const minPostsBetweenAds = 4;
+  const maxPostsBetweenAds = 7;
+  
+  for (let i = 0; i < content.length; i++) {
+    mixedContent.push(content[i]);
+    postCount++;
+    
+    // Insertar anuncio después de cierto número de posts
+    if (postCount >= minPostsBetweenAds && 
+        postCount <= maxPostsBetweenAds && 
+        adIndex < adsCopy.length) {
+      
+      // Elegir posición aleatoria dentro del rango
+      const shouldInsertAd = Math.random() < 0.3; // 30% de probabilidad
+      
+      if (shouldInsertAd) {
+        console.log(`📢 Insertando anuncio ${adIndex + 1} después de ${postCount} posts`);
+        mixedContent.push(adsCopy[adIndex]);
+        adIndex++;
+        postCount = 0; // Reiniciar contador
+      }
+    }
+    
+    // Si llegamos al máximo, insertar anuncio forzadamente
+    if (postCount >= maxPostsBetweenAds && adIndex < adsCopy.length) {
+      console.log(`📢 Insertando anuncio ${adIndex + 1} forzadamente después de ${postCount} posts`);
+      mixedContent.push(adsCopy[adIndex]);
+      adIndex++;
+      postCount = 0;
+    }
+  }
+  
+  console.log(`✅ Mezcla completada: ${mixedContent.length} elementos totales`);
+  return mixedContent;
 }
 
 module.exports = {

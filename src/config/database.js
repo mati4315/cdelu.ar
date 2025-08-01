@@ -7,7 +7,7 @@ const config = {
   port: parseInt(process.env.DB_PORT, 10) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'cdelu_diario',
+  database: process.env.DB_NAME || 'trigamer_diario',
   waitForConnections: true,
   connectionLimit: parseInt(process.env.DB_POOL_MAX, 10) || 5, // Reducido para hosting compartido
   queueLimit: 0,
