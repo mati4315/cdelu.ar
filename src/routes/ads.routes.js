@@ -229,7 +229,7 @@ async function adsRoutes(fastify, options) {
         properties: {
           titulo: { type: 'string', minLength: 1, maxLength: 255 },
           descripcion: { type: 'string' },
-          image_url: { type: 'string', format: 'uri' },
+          image_url: { type: 'string', nullable: true },
           enlace_destino: { type: 'string', format: 'uri' },
           texto_opcional: { type: 'string', maxLength: 255 },
           categoria: { type: 'string', default: 'general' },
@@ -284,7 +284,7 @@ async function adsRoutes(fastify, options) {
         properties: {
           titulo: { type: 'string', minLength: 1, maxLength: 255 },
           descripcion: { type: 'string' },
-          image_url: { type: 'string', format: 'uri' },
+          image_url: { type: 'string', nullable: true },
           enlace_destino: { type: 'string', format: 'uri' },
           texto_opcional: { type: 'string', maxLength: 255 },
           categoria: { type: 'string' },
