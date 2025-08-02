@@ -98,8 +98,14 @@ async function login(request, reply) {
     });
 
     console.log('✅ Login exitoso, token generado');
+    console.log('👤 Datos del usuario a enviar:', {
+      id: user.id,
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol
+    });
 
-    reply.send({
+    const responseData = {
       token,
       user: {
         id: user.id,
@@ -107,7 +113,10 @@ async function login(request, reply) {
         email: user.email,
         rol: user.rol
       }
-    });
+    };
+
+    console.log('📤 Respuesta completa:', JSON.stringify(responseData, null, 2));
+    reply.send(responseData);
   } catch (error) {
     console.error('❌ Error en login:', error);
     request.log.error(error);

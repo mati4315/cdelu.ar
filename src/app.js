@@ -51,6 +51,10 @@ fastify.register(require('@fastify/jwt'), {
   }
 });
 
+// Registrar Rate Limiting - CRÍTICO para seguridad
+const { registerRateLimit } = require('./middlewares/rateLimit');
+registerRateLimit(fastify);
+
 // Registrar plugin para servir archivos estáticos
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, '..', 'public'),

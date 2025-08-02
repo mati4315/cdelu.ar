@@ -33,7 +33,7 @@ async function authRoutes(fastify, options) {
             maxLength: 100,
             description: 'Contraseña del usuario (mínimo 6 caracteres)'
           },
-          role: { 
+          rol: { 
             type: 'string', 
             enum: ['administrador', 'colaborador', 'usuario'],
             default: 'usuario',
@@ -53,7 +53,7 @@ async function authRoutes(fastify, options) {
                 id: { type: 'integer' },
                 nombre: { type: 'string' },
                 email: { type: 'string' },
-                role: { type: 'string' },
+                rol: { type: 'string' },
                 created_at: { type: 'string', format: 'date-time' }
               }
             },
@@ -116,7 +116,7 @@ async function authRoutes(fastify, options) {
                 id: { type: 'integer' },
                 nombre: { type: 'string' },
                 email: { type: 'string' },
-                role: { type: 'string' }
+                rol: { type: 'string' }
               }
             },
             token: { 
@@ -162,7 +162,7 @@ async function authRoutes(fastify, options) {
                 id: { type: 'integer' },
                 nombre: { type: 'string' },
                 email: { type: 'string' },
-                role: { type: 'string' },
+                rol: { type: 'string' },
                 created_at: { type: 'string', format: 'date-time' }
               }
             }
@@ -185,7 +185,7 @@ async function authRoutes(fastify, options) {
           id: request.user.id,
           nombre: request.user.nombre,
           email: request.user.email,
-          role: request.user.role,
+          rol: request.user.rol,
           created_at: request.user.created_at
         }
       });
