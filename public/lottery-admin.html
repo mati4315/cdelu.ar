@@ -360,12 +360,14 @@
         .card-body {
             padding: 2rem;
             color: var(--text-secondary);
+            min-height: 200px;
         }
         
         /* === LOTTERY CARDS === */
         .lottery-card {
             transition: all 0.3s ease;
             height: 100%;
+            min-height: 300px;
         }
         
         .lottery-card:hover {
@@ -441,6 +443,10 @@
         
         .stats-card .card-body {
             padding: 1.5rem;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         .stats-card h5 {
@@ -844,7 +850,7 @@
                     <div class="col-md-3">
                         <div class="card stats-card">
                             <div class="card-body text-center">
-                                <h5><i class="fas fa-ticket-alt"></i></h5>
+                                <h5><i class="bi bi-ticket-alt"></i></h5>
                                 <h4 id="totalLotteries">0</h4>
                                 <small>Total Loterías</small>
                             </div>
@@ -853,7 +859,7 @@
                     <div class="col-md-3">
                         <div class="card stats-card">
                             <div class="card-body text-center">
-                                <h5><i class="fas fa-play"></i></h5>
+                                <h5><i class="bi bi-play"></i></h5>
                                 <h4 id="activeLotteries">0</h4>
                                 <small>Activas</small>
                             </div>
@@ -862,7 +868,7 @@
                     <div class="col-md-3">
                         <div class="card stats-card">
                             <div class="card-body text-center">
-                                <h5><i class="fas fa-trophy"></i></h5>
+                                <h5><i class="bi bi-trophy"></i></h5>
                                 <h4 id="finishedLotteries">0</h4>
                                 <small>Finalizadas</small>
                             </div>
@@ -871,7 +877,7 @@
                     <div class="col-md-3">
                         <div class="card stats-card">
                             <div class="card-body text-center">
-                                <h5><i class="fas fa-users"></i></h5>
+                                <h5><i class="bi bi-people"></i></h5>
                                 <h4 id="totalParticipants">0</h4>
                                 <small>Participantes</small>
                             </div>
@@ -1128,7 +1134,7 @@
                         <hr>
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
-                                <i class="fas fa-calendar"></i> ${formatDate(lottery.end_date)}
+                                <i class="bi bi-calendar"></i> ${formatDate(lottery.end_date)}
                             </small>
                             <div class="btn-group btn-group-sm">
                                                                         <button class="btn btn-outline-primary" onclick="viewDetails(${lottery.id})" title="Ver detalles">
@@ -1147,40 +1153,40 @@
                                 ` : ''}
                                 ${lottery.status === 'active' ? `
                                     <button class="btn btn-outline-warning" onclick="finishLottery(${lottery.id})" title="Finalizar Lotería">
-                                        <i class="fas fa-trophy"></i>
+                                        <i class="bi bi-trophy"></i>
                                     </button>
                                     <button class="btn btn-outline-success" onclick="editLottery(${lottery.id})" title="Editar">
-                                        <i class="fas fa-edit"></i>
+                                        <i class="bi bi-pencil"></i>
                                     </button>
                                     <button class="btn btn-outline-danger" onclick="cancelLottery(${lottery.id})" title="Cancelar">
-                                        <i class="fas fa-ban"></i>
+                                        <i class="bi bi-x-circle"></i>
                                     </button>
                                     <button class="btn btn-outline-dark" onclick="deleteLottery(${lottery.id})" title="Eliminar">
-                                        <i class="fas fa-trash-alt"></i>
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 ` : ''}
                                 ${lottery.status === 'cancelled' ? `
                                     <button class="btn btn-outline-success" onclick="editLottery(${lottery.id})" title="Editar">
-                                        <i class="fas fa-edit"></i>
+                                        <i class="bi bi-pencil"></i>
                                     </button>
                                     <button class="btn btn-outline-primary" onclick="resumeLottery(${lottery.id})" title="Reanudar">
-                                        <i class="fas fa-play-circle"></i>
+                                        <i class="bi bi-play-circle"></i>
                                     </button>
                                     <button class="btn btn-outline-danger" onclick="deleteLottery(${lottery.id})" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 ` : ''}
                                 ${lottery.current_status === 'overdue' ? `
                                     <button class="btn btn-outline-danger" onclick="finishLottery(${lottery.id})" title="Finalizar (Vencida)">
-                                        <i class="fas fa-trophy"></i>
+                                        <i class="bi bi-trophy"></i>
                                     </button>
                                     <button class="btn btn-outline-dark" onclick="deleteLottery(${lottery.id})" title="Eliminar">
-                                        <i class="fas fa-trash-alt"></i>
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 ` : ''}
                                 ${lottery.status === 'finished' ? `
                                     <button class="btn btn-outline-dark" onclick="deleteLottery(${lottery.id})" title="Eliminar">
-                                        <i class="fas fa-trash-alt"></i>
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 ` : ''}
                             </div>
