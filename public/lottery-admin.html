@@ -702,6 +702,67 @@
             border-color: var(--accent-primary);
             box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
         }
+
+        /* === MODAL STYLES === */
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .modal-body {
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .modal-footer {
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-primary);
+        }
+
+        .modal .card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+        }
+
+        .modal .card-header {
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+
+        .modal .card-body {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .modal .btn {
+            color: var(--text-primary);
+        }
+
+        .modal .btn-outline-danger {
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .modal .btn-outline-danger:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        .modal .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .modal strong {
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -1459,27 +1520,27 @@
                                 <div class="card-body">
                                     ${lottery.status === 'draft' ? `
                                         <button class="btn btn-success btn-sm w-100 mb-2" onclick="activateLottery(${lottery.id})">
-                                            <i class="fas fa-play"></i> Activar
+                                            <i class="bi bi-play"></i> Activar
                                         </button>
                                     ` : ''}
                                     ${lottery.status === 'active' ? `
                                         <button class="btn btn-warning btn-sm w-100 mb-2" onclick="finishLottery(${lottery.id})">
-                                            <i class="fas fa-trophy"></i> Finalizar Lotería
+                                            <i class="bi bi-trophy"></i> Finalizar Lotería
                                         </button>
                                         <button class="btn btn-outline-danger btn-sm w-100 mb-2" onclick="cancelLottery(${lottery.id})">
-                                            <i class="fas fa-ban"></i> Cancelar
+                                            <i class="bi bi-x-circle"></i> Cancelar
                                         </button>
                                     ` : ''}
                                     ${lottery.current_status === 'overdue' ? `
                                         <button class="btn btn-danger btn-sm w-100 mb-2" onclick="finishLottery(${lottery.id})">
-                                            <i class="fas fa-trophy"></i> Finalizar (Vencida)
+                                            <i class="bi bi-trophy"></i> Finalizar (Vencida)
                                         </button>
                                     ` : ''}
                                     <button class="btn btn-info btn-sm w-100 mb-2" onclick="viewWinners(${lottery.id})">
-                                        <i class="fas fa-trophy"></i> Ver Ganadores
+                                        <i class="bi bi-trophy"></i> Ver Ganadores
                                     </button>
                                     <button class="btn btn-secondary btn-sm w-100" onclick="generateReport(${lottery.id})">
-                                        <i class="fas fa-chart-bar"></i> Reporte
+                                        <i class="bi bi-graph-up"></i> Reporte
                                     </button>
                                 </div>
                             </div>
