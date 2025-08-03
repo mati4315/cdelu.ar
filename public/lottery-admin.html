@@ -540,7 +540,27 @@
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
-                showAlert('Lotería guardada exitosamente', 'success');
+                // Si es una nueva lotería, activarla automáticamente
+                if (!currentLotteryId) {
+                    const newLotteryId = response.data.data.id;
+                    console.log('🎯 Activando nueva lotería automáticamente...');
+                    
+                    try {
+                        await axios.put(`${API_BASE}/${newLotteryId}`, {
+                            status: 'active'
+                        }, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        
+                        showAlert('Lotería creada y activada exitosamente', 'success');
+                    } catch (activateError) {
+                        console.error('Error al activar lotería:', activateError);
+                        showAlert('Lotería creada pero hubo un error al activarla', 'warning');
+                    }
+                } else {
+                    showAlert('Lotería actualizada exitosamente', 'success');
+                }
+                
                 closeModal('lotteryModal');
                 loadLotteries(currentPage);
                 updateStats();
