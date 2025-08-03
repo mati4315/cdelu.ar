@@ -177,8 +177,8 @@
                                 <div class="mb-3">
                                     <label for="is_free" class="form-label">Tipo</label>
                                     <select class="form-select" id="is_free">
+                                        <option value="true" selected>Gratuita</option>
                                         <option value="false">De pago</option>
-                                        <option value="true">Gratuita</option>
                                     </select>
                                 </div>
                             </div>
@@ -199,7 +199,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="max_tickets" class="form-label">Tickets máximos *</label>
-                                    <input type="number" class="form-control" id="max_tickets" required min="1">
+                                    <input type="number" class="form-control" id="max_tickets" required min="1" value="100">
                                 </div>
                             </div>
                         </div>
@@ -212,9 +212,10 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="ticket_price" class="form-label">Precio por ticket</label>
-                                    <input type="number" class="form-control" id="ticket_price" value="0" min="0" step="0.01">
+                                <div class="mb-3" id="priceFieldContainer" style="display: none;">
+                                    <label for="ticket_price" class="form-label">Precio por ticket *</label>
+                                    <input type="number" class="form-control" id="ticket_price" value="100" min="100" step="0.01" required>
+                                    <div class="form-text">Mínimo $100</div>
                                 </div>
                             </div>
                         </div>
@@ -232,16 +233,6 @@
                                     <input type="datetime-local" class="form-control" id="end_date" required>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="prize_description" class="form-label">Descripción del premio</label>
-                            <textarea class="form-control" id="prize_description" rows="2"></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="terms_conditions" class="form-label">Términos y condiciones</label>
-                            <textarea class="form-control" id="terms_conditions" rows="3"></textarea>
                         </div>
                     </form>
                 </div>
@@ -527,8 +518,11 @@
             const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
             const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
             
-            document.getElementById('start_date').value = formatDateTimeLocal(tomorrow);
+            document.getElementById('start_date').value = formatDateTimeLocal(now);
             document.getElementById('end_date').value = formatDateTimeLocal(nextWeek);
+            
+            // Configurar campo de precio según tipo de lotería
+            setupPriceField();
             
             new bootstrap.Modal(document.getElementById('lotteryModal')).show();
         }
@@ -572,8 +566,8 @@
                 num_winners: parseInt(document.getElementById('num_winners').value),
                 start_date: startDate ? new Date(startDate).toISOString() : null,
                 end_date: endDate ? new Date(endDate).toISOString() : null,
-                prize_description: document.getElementById('prize_description').value,
-                terms_conditions: document.getElementById('terms_conditions').value
+                prize_description: '', // Campo eliminado
+                terms_conditions: '' // Campo eliminado
             };
         }
 
@@ -1448,8 +1442,7 @@ NO podrás cambiar:
                 document.getElementById('start_date').value = formatDateTimeLocal(startDate);
                 document.getElementById('end_date').value = formatDateTimeLocal(endDate);
                 
-                document.getElementById('prize_description').value = lottery.prize_description || '';
-                document.getElementById('terms_conditions').value = lottery.terms_conditions || '';
+                // Los campos prize_description y terms_conditions fueron eliminados
                 
                 // Deshabilitar campos restringidos para loterías activas con tickets vendidos
                 const isActiveWithTickets = lottery.status === 'active' && lottery.tickets_sold > 0;
@@ -1667,6 +1660,33 @@ Los tickets que fueron reembolsados NO se restaurarán automáticamente.`;
             }
         }
 
+        // Configurar campo de precio según tipo de lotería
+        function setupPriceField() {
+            const isFreeSelect = document.getElementById('is_free');
+            const priceContainer = document.getElementById('priceFieldContainer');
+            const priceInput = document.getElementById('ticket_price');
+            
+            if (isFreeSelect.value === 'true') {
+                // Lotería gratuita
+                priceContainer.style.display = 'none';
+                priceInput.required = false;
+                priceInput.value = '0';
+            } else {
+                // Lotería de pago
+                priceContainer.style.display = 'block';
+                priceInput.required = true;
+                priceInput.value = '100';
+            }
+        }
+
+        // Event listener para cambio de tipo de lotería
+        document.addEventListener('DOMContentLoaded', function() {
+            const isFreeSelect = document.getElementById('is_free');
+            if (isFreeSelect) {
+                isFreeSelect.addEventListener('change', setupPriceField);
+            }
+        });
+
         // Funciones auxiliares
         function getStatusClass(status) {
             const classes = {
@@ -1797,6 +1817,14 @@ Los tickets que fueron reembolsados NO se restaurarán automáticamente.`;
         // Event listeners para filtros
         document.getElementById('statusFilter').addEventListener('change', () => loadLotteries(1));
         document.getElementById('typeFilter').addEventListener('change', () => loadLotteries(1));
+        
+        // Event listener para cambio de tipo de lotería en el modal
+        document.addEventListener('DOMContentLoaded', function() {
+            const isFreeSelect = document.getElementById('is_free');
+            if (isFreeSelect) {
+                isFreeSelect.addEventListener('change', setupPriceField);
+            }
+        });
     </script>
 </body>
 </html> 
