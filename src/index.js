@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const config = require('./config/default');
 const { scheduleRSSImport } = require('./services/rssService');
 const pool = require('./config/database');
+const LotteryAdWorker = require('./workers/lotteryAdWorker');
 
 // Cargar variables de entorno
 dotenv.config();
@@ -123,6 +124,15 @@ const start = async () => {
         console.log(`📰 Importación automática de RSS iniciada (cada ${config.rss.intervalMinutes} minutos)`);
       } else {
         console.log('📰 Importación automática de RSS deshabilitada');
+      }
+      
+      // Iniciar worker de anuncios de lotería
+      if (dbConnected) {
+        const lotteryAdWorker = new LotteryAdWorker();
+        lotteryAdWorker.startAutoMode(5); // Ejecutar cada 5 minutos
+        console.log('🎰 Worker de anuncios de lotería iniciado (cada 5 minutos)');
+      } else {
+        console.log('🎰 Worker de anuncios de lotería deshabilitado (BD no conectada)');
       }
       
       // Salir del bucle de reintentos

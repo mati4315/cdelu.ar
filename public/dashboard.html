@@ -401,6 +401,43 @@
             border-color: var(--accent-primary);
         }
 
+        /* === LOTTERY AD BANNER === */
+        .lottery-ad-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: var(--border-radius-lg);
+            color: white;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+        }
+        
+        .lottery-ad-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .lottery-ad-icon {
+            font-size: 2rem;
+            opacity: 0.9;
+        }
+        
+        .lottery-ad-title {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .lottery-ad-description {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+        }
+        
+        .lottery-ad-badge {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
         /* === LOTTERY STATS CARDS === */
         .stats-card {
             background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
@@ -1336,6 +1373,35 @@
                             <h3>Gestión de Loterías</h3>
                         </div>
                         <div class="card-body">
+                            <!-- Lottery Ad Banner -->
+                            <div id="lotteryAdBanner" class="mb-4" style="display: none;">
+                                <div class="card lottery-ad-card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                <div class="lottery-ad-icon me-3">
+                                                    <i class="bi bi-trophy-fill text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <h5 class="mb-1 lottery-ad-title">🎰 ¡Loterías Activas!</h5>
+                                                    <p class="mb-0 lottery-ad-description">¡Participa en nuestras loterías activas con premios increíbles!</p>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-success me-3 lottery-ad-badge">
+                                                    <i class="bi bi-play-circle me-1"></i>
+                                                    <span id="activeLotteriesCount">0</span> Activa<span id="activeLotteriesPlural">s</span>
+                                                </span>
+                                                <a href="/lottery.html" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-arrow-right me-1"></i>
+                                                    Participar
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Stats Cards -->
                             <div class="row mb-4">
                                 <div class="col-md-3">
@@ -1840,6 +1906,9 @@
                     safeSetText('total-participants', totalParticipants);
                     safeSetText('total-tickets-sold', totalTicketsSold);
                     safeSetText('lottery-revenue', `$${totalRevenue.toLocaleString()}`);
+                    
+                    // Show/hide lottery ad banner based on active lotteries
+                    updateLotteryAdBanner(lotteries);
                     
                 } else {
                     console.warn('Error loading lottery stats:', response.statusText);
@@ -2888,6 +2957,44 @@
             nextLi.className = `page-item ${pagination.page >= pagination.pages ? 'disabled' : ''}`;
             nextLi.innerHTML = `<a class="page-link" href="#" onclick="loadLotteries(${pagination.page + 1})">Siguiente</a>`;
             container.appendChild(nextLi);
+        }
+
+        // === LOTTERY AD BANNER FUNCTIONS ===
+        function updateLotteryAdBanner(lotteries) {
+            const banner = document.getElementById('lotteryAdBanner');
+            const countElement = document.getElementById('activeLotteriesCount');
+            const pluralElement = document.getElementById('activeLotteriesPlural');
+            
+            if (!banner || !countElement || !pluralElement) {
+                console.warn('Elementos del banner de lotería no encontrados');
+                return;
+            }
+            
+            // Filtrar loterías que están realmente activas y en ejecución
+            const activeLotteries = lotteries.filter(lottery => 
+                lottery.status === 'active' && lottery.current_status === 'running'
+            );
+            
+            if (activeLotteries.length > 0) {
+                // Mostrar banner
+                banner.style.display = 'block';
+                
+                // Actualizar contador
+                countElement.textContent = activeLotteries.length;
+                pluralElement.textContent = activeLotteries.length > 1 ? 's' : '';
+                
+                // Actualizar descripción dinámicamente
+                const descriptionElement = banner.querySelector('.lottery-ad-description');
+                if (descriptionElement) {
+                    descriptionElement.textContent = `¡Participa en nuestras ${activeLotteries.length} lotería${activeLotteries.length > 1 ? 's' : ''} activa${activeLotteries.length > 1 ? 's' : ''} con premios increíbles!`;
+                }
+                
+                console.log(`🎰 Banner de lotería mostrado con ${activeLotteries.length} lotería${activeLotteries.length > 1 ? 's' : ''} activa${activeLotteries.length > 1 ? 's' : ''}`);
+            } else {
+                // Ocultar banner
+                banner.style.display = 'none';
+                console.log('🎰 Banner de lotería ocultado - no hay loterías activas');
+            }
         }
 
         // Initialize - La navegación se maneja automáticamente por handleHashNavigation()

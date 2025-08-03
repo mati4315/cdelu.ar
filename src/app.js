@@ -11,6 +11,7 @@ const feedRoutes = require('./routes/feed.routes.js');
 const mobileRoutes = require('./routes/mobile.routes.js');
 const adsRoutes = require('./routes/ads.routes.js');
 const lotteryRoutes = require('./routes/lottery.routes.js');
+const surveyRoutes = require('./routes/survey.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
@@ -269,6 +270,7 @@ fastify.register(feedRoutes);
 fastify.register(mobileRoutes);
 fastify.register(adsRoutes);
 fastify.register(lotteryRoutes);
+fastify.register(surveyRoutes);
 
 // Ruta específica para el dashboard (opcional)
 fastify.get('/dashboard', async (request, reply) => {
