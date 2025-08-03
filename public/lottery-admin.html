@@ -1,103 +1,841 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administración de Loterías - CdelU</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .lottery-card {
-            transition: transform 0.2s;
-            border: 1px solid #e0e0e0;
+        :root {
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --border-radius-sm: 6px;
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        .lottery-card:hover {
+        
+        /* === VARIABLES DE TEMA OSCURO === */
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --bg-elevated: #212121;
+            --bg-surface: #2a2a2a;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #e5e5e5;
+            --text-tertiary: #a3a3a3;
+            --text-muted: #737373;
+            
+            --border-primary: #262626;
+            --border-secondary: #404040;
+            
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-hover: #4f46e5;
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            --sidebar-bg: linear-gradient(180deg, #111111 0%, #0a0a0a 100%);
+            --card-bg: #1a1a1a;
+            --input-bg: #262626;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* === VARIABLES DE TEMA CLARO === */
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-elevated: #ffffff;
+            --bg-surface: #f8fafc;
+            
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --text-tertiary: #64748b;
+            --text-muted: #94a3b8;
+            
+            --border-primary: #e2e8f0;
+            --border-secondary: #cbd5e1;
+            
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-hover: #4f46e5;
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            --sidebar-bg: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --hover-bg: rgba(0, 0, 0, 0.05);
+        }
+        
+        /* === ESTILOS BASE === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* === DASHBOARD LAYOUT === */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* === SIDEBAR === */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-primary);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+        
+        .sidebar-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+        
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .nav-menu {
+            padding: 1.5rem 0;
+        }
+        
+        .nav-group {
+            margin-bottom: 2rem;
+        }
+        
+        .nav-group-title {
+            padding: 0 2rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 2rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+            position: relative;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+        
+        .nav-link.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: white;
+            border-radius: 2px;
+        }
+        
+        .nav-icon {
+            font-size: 1.125rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .top-bar {
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-primary);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .theme-toggle {
+            position: relative;
+            width: 48px;
+            height: 28px;
+        }
+        
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--border-secondary);
+            transition: var(--transition);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+        }
+        
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            background: var(--bg-elevated);
+            transition: var(--transition);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+        }
+        
+        input:checked + .theme-slider {
+            background: var(--accent-primary);
+        }
+        
+        input:checked + .theme-slider:before {
+            transform: translateX(20px);
+        }
+        
+        .theme-icon {
+            position: absolute;
+            font-size: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: var(--transition);
+        }
+        
+        .theme-icon.sun {
+            right: 6px;
+            color: var(--warning);
+        }
+        
+        .theme-icon.moon {
+            left: 6px;
+            color: var(--text-muted);
+        }
+        
+        input:checked + .theme-slider .theme-icon.sun {
+            opacity: 0;
+        }
+        
+        input:not(:checked) + .theme-slider .theme-icon.moon {
+            opacity: 0;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        /* === CARDS === */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 1.5rem 2rem;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .card-header h3 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .card-body {
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+        
+        /* === LOTTERY CARDS === */
+        .lottery-card {
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .lottery-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .lottery-progress {
+            background-color: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .lottery-progress .progress-bar {
+            transition: width 0.6s ease;
+        }
+        
+        .lottery-stats-box {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .lottery-stats-box:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-primary);
+        }
+        
+        .lottery-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .lottery-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+        
+        .lottery-description {
+            color: var(--text-tertiary);
+            line-height: 1.4;
+        }
+        
+        .lottery-actions .btn {
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .lottery-actions .btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        /* === LOTTERY STATS CARDS === */
+        .stats-card {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border: none;
+            transition: var(--transition);
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stats-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .stats-card h5 {
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+        
+        .stats-card h4 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stats-card small {
+            opacity: 0.8;
+            font-size: 0.875rem;
+        }
+        
+        /* === FORMULARIOS === */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            transition: var(--transition);
+            font-size: 0.875rem;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* === BOTONES === */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+        
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                display: none;
+            }
+            
+            .mobile-overlay.show {
+                display: block;
+            }
+        }
+        
+        /* === UTILITIES === */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+        
+        .text-primary {
+            color: var(--accent-primary) !important;
+        }
+        
+        .text-success {
+            color: var(--success) !important;
+        }
+        
+        .text-warning {
+            color: var(--warning) !important;
+        }
+        
+        .text-danger {
+            color: var(--error) !important;
+        }
+        
+        .bg-primary {
+            background-color: var(--accent-primary) !important;
+        }
+        
+        .bg-success {
+            background-color: var(--success) !important;
+        }
+        
+        .bg-warning {
+            background-color: var(--warning) !important;
+        }
+        
+        .bg-danger {
+            background-color: var(--error) !important;
+        }
+        
+        .bg-info {
+            background-color: var(--info) !important;
+        }
+        
+        .bg-secondary {
+            background-color: var(--text-muted) !important;
+        }
+        
+        .bg-dark {
+            background-color: var(--bg-tertiary) !important;
+        }
+        
         .status-badge {
             font-size: 0.8rem;
         }
-        .stats-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
+        
         .btn-lottery {
             border-radius: 20px;
             font-weight: 500;
         }
+        
         .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             color: white;
         }
+        
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        }
-        .navbar-brand {
-            font-weight: bold;
-            color: #667eea !important;
-        }
-        .sidebar {
-            min-height: 100vh;
-            background: #f8f9fa;
-        }
-        .content-area {
-            min-height: 100vh;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
         }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-dice"></i> CdelU Loterías
-            </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3" id="userInfo">
-                    <i class="fas fa-user"></i> <span id="username">Cargando...</span>
-                </span>
-                <button class="btn btn-outline-light btn-sm" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Salir
-                </button>
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="logo">
+                    <div class="logo-icon">
+                        <i class="bi bi-trophy"></i>
+                    </div>
+                    <h1 class="logo-text">CdelU</h1>
+                </a>
             </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar p-3">
-                <div class="d-flex flex-column">
-                    <button class="btn btn-primary btn-lottery mb-2" onclick="showCreateLotteryModal()">
-                        <i class="fas fa-plus"></i> Nueva Lotería
+            
+            <nav class="nav-menu">
+                <div class="nav-group">
+                    <div class="nav-group-title">Panel Principal</div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html" class="nav-link">
+                            <i class="nav-icon bi bi-speedometer2"></i>
+                            Dashboard
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html#news" class="nav-link">
+                            <i class="nav-icon bi bi-newspaper"></i>
+                            Noticias
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html#users" class="nav-link">
+                            <i class="nav-icon bi bi-people"></i>
+                            Usuarios
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-group">
+                    <div class="nav-group-title">Herramientas</div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html#stats" class="nav-link">
+                            <i class="nav-icon bi bi-graph-up"></i>
+                            Estadísticas
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html#api-docs" class="nav-link">
+                            <i class="nav-icon bi bi-code-square"></i>
+                            API Docs
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html#communication" class="nav-link">
+                            <i class="nav-icon bi bi-chat-dots"></i>
+                            Comunicaciones
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/ads-dashboard.html" class="nav-link" target="_blank">
+                            <i class="nav-icon bi bi-megaphone"></i>
+                            Publicidad
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#lotteries" class="nav-link active">
+                            <i class="nav-icon bi bi-trophy"></i>
+                            Loterías
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-group">
+                    <div class="nav-group-title">Sistema</div>
+                    <div class="nav-item">
+                        <a href="/dashboard.html#health" class="nav-link">
+                            <i class="nav-icon bi bi-heart-pulse"></i>
+                            Estado del Sistema
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="bi bi-list"></i>
                     </button>
-                    <hr>
-                    <h6 class="text-muted">Filtros</h6>
-                    <select class="form-select mb-2" id="statusFilter">
-                        <option value="">Todos los estados</option>
-                        <option value="draft">Borrador</option>
-                        <option value="active">Activa</option>
-                        <option value="closed">Cerrada</option>
-                        <option value="finished">Finalizada</option>
-                        <option value="cancelled">Cancelada</option>
-                    </select>
-                    <select class="form-select mb-2" id="typeFilter">
-                        <option value="">Todos los tipos</option>
-                        <option value="true">Gratuitas</option>
-                        <option value="false">De pago</option>
-                    </select>
-                    <hr>
-                    <h6 class="text-muted">Acciones</h6>
-                    <button class="btn btn-outline-secondary btn-sm mb-1" onclick="refreshLotteries()">
-                        <i class="fas fa-sync"></i> Actualizar
-                    </button>
-                    <button class="btn btn-outline-info btn-sm mb-1" onclick="checkOverdueLotteries()">
-                        <i class="fas fa-clock"></i> Verificar Vencidas
+                    <h1 class="page-title" id="pageTitle">Administración de Loterías</h1>
+                </div>
+                
+                <div class="top-bar-actions">
+                    <label class="theme-toggle">
+                        <input type="checkbox" id="themeToggle">
+                        <span class="theme-slider">
+                            <i class="theme-icon sun bi bi-sun-fill"></i>
+                            <i class="theme-icon moon bi bi-moon-fill"></i>
+                        </span>
+                    </label>
+                    
+                    <button class="btn btn-outline btn-sm" id="logoutBtn">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Cerrar Sesión
                     </button>
                 </div>
+            </header>
+            
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5><i class="bi bi-ticket-alt"></i></h5>
+                                <h4 id="totalLotteries">0</h4>
+                                <small>Total Loterías</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5><i class="bi bi-play"></i></h5>
+                                <h4 id="activeLotteries">0</h4>
+                                <small>Activas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5><i class="bi bi-trophy"></i></h5>
+                                <h4 id="finishedLotteries">0</h4>
+                                <small>Finalizadas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5><i class="bi bi-people"></i></h5>
+                                <h4 id="totalParticipants">0</h4>
+                                <small>Participantes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary" onclick="showCreateLotteryModal()">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Nueva Lotería
+                                </button>
+                                <button class="btn btn-outline" onclick="refreshLotteries()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                    Actualizar
+                                </button>
+                                <button class="btn btn-outline" onclick="checkOverdueLotteries()">
+                                    <i class="bi bi-clock"></i>
+                                    Verificar Vencidas
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <select class="form-control" id="statusFilter" style="width: auto;">
+                                    <option value="">Todos los estados</option>
+                                    <option value="draft">Borrador</option>
+                                    <option value="active" selected>Activa</option>
+                                    <option value="closed">Cerrada</option>
+                                    <option value="finished">Finalizada</option>
+                                    <option value="cancelled">Cancelada</option>
+                                </select>
+                                <select class="form-control" id="typeFilter" style="width: auto;">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="true">Gratuitas</option>
+                                    <option value="false">De pago</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lotteries List -->
+                <div class="row" id="lotteriesContainer">
+                    <!-- Las loterías se cargarán aquí dinámicamente -->
+                </div>
+
+                <!-- Pagination -->
+                <nav aria-label="Paginación de loterías" class="mt-4">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- Paginación se generará dinámicamente -->
+                    </ul>
+                </nav>
             </div>
+        </main>
+    </div>
 
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10 content-area p-4">
@@ -259,7 +997,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         // Configuración global
@@ -393,19 +1131,19 @@
                                 <i class="fas fa-calendar"></i> ${formatDate(lottery.end_date)}
                             </small>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" onclick="viewDetails(${lottery.id})" title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                                                                        <button class="btn btn-outline-primary" onclick="viewDetails(${lottery.id})" title="Ver detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
                                 ${lottery.status === 'draft' ? `
-                                    <button class="btn btn-outline-success" onclick="editLottery(${lottery.id})" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning" onclick="activateLottery(${lottery.id})" title="Activar">
-                                        <i class="fas fa-play"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteLottery(${lottery.id})" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                                                                <button class="btn btn-outline-success" onclick="editLottery(${lottery.id})" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning" onclick="activateLottery(${lottery.id})" title="Activar">
+                                                <i class="bi bi-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteLottery(${lottery.id})" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                 ` : ''}
                                 ${lottery.status === 'active' ? `
                                     <button class="btn btn-outline-warning" onclick="finishLottery(${lottery.id})" title="Finalizar Lotería">
@@ -1834,6 +2572,84 @@ Los tickets que fueron reembolsados NO se restaurarán automáticamente.`;
             window.location.href = '/login.html';
         }
 
+        // === DASHBOARD FUNCTIONS ===
+        
+        // Theme toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+            
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            body.setAttribute('data-theme', savedTheme);
+            themeToggle.checked = savedTheme === 'light';
+            
+            // Theme toggle event
+            themeToggle.addEventListener('change', function() {
+                const newTheme = this.checked ? 'light' : 'dark';
+                body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+            
+            // Mobile menu functionality
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            
+            mobileMenuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('show');
+            });
+            
+            mobileOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.remove('show');
+            });
+            
+            // Logout functionality
+            const logoutBtn = document.getElementById('logoutBtn');
+            logoutBtn.addEventListener('click', function() {
+                localStorage.removeItem('token');
+                window.location.href = '/login.html';
+            });
+            
+            // Check authentication
+            checkAuth();
+        });
+        
+        // Check authentication function
+        async function checkAuth() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const response = await axios.get('/api/v1/auth/me', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.data.user.rol !== 'administrador') {
+                    alert('Acceso denegado. Solo administradores pueden acceder.');
+                    window.location.href = '/dashboard.html';
+                    return;
+                }
+
+                // Update username in top bar
+                const usernameElement = document.querySelector('.top-bar-actions');
+                if (usernameElement) {
+                    const userSpan = document.createElement('span');
+                    userSpan.className = 'me-3 text-muted';
+                    userSpan.innerHTML = `<i class="bi bi-person"></i> ${response.data.user.nombre}`;
+                    usernameElement.insertBefore(userSpan, usernameElement.firstChild);
+                }
+            } catch (error) {
+                console.error('Error de autenticación:', error);
+                window.location.href = '/login.html';
+            }
+        }
+        
         // Event listeners para filtros
         document.getElementById('statusFilter').addEventListener('change', () => loadLotteries(1));
         document.getElementById('typeFilter').addEventListener('change', () => loadLotteries(1));
