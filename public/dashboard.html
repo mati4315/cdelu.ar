@@ -367,6 +367,81 @@
             color: var(--text-secondary);
         }
         
+        /* === LOTTERY CARDS === */
+        .lottery-card {
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .lottery-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .lottery-progress {
+            background-color: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .lottery-progress .progress-bar {
+            transition: width 0.6s ease;
+        }
+        
+        .lottery-stats-box {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .lottery-stats-box:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-primary);
+        }
+        
+        .lottery-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .lottery-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+        
+        .lottery-description {
+            color: var(--text-tertiary);
+            line-height: 1.4;
+        }
+        
+        .lottery-actions .btn {
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .lottery-actions .btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        /* Responsive adjustments for lottery cards */
+        @media (max-width: 768px) {
+            .lottery-card .card-body {
+                padding: 1.25rem;
+            }
+            
+            .lottery-stats-box {
+                padding: 0.5rem;
+            }
+        }
+        
         /* === FORMULARIOS === */
         .form-group {
             margin-bottom: 1.5rem;
@@ -849,6 +924,12 @@
                             Publicidad
                         </a>
                     </div>
+                    <div class="nav-item">
+                        <a href="/lottery-admin.html" class="nav-link" target="_blank">
+                            <i class="nav-icon bi bi-trophy"></i>
+                            Loterías
+                        </a>
+                    </div>
                 </div>
                 
                 <div class="nav-group">
@@ -948,7 +1029,90 @@
                         </div>
                     </div>
                     
+                    <!-- Estadísticas de Loterías -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Loterías Activas</h6>
+                                        <i class="bi bi-trophy text-warning" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="active-lotteries">-</h2>
+                                    <small class="text-muted">En progreso</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Total Participantes</h6>
+                                        <i class="bi bi-people-fill text-info" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="total-participants">-</h2>
+                                    <small class="text-muted">En loterías activas</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Tickets Vendidos</h6>
+                                        <i class="bi bi-ticket-perforated text-success" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="total-tickets-sold">-</h2>
+                                    <small class="text-muted">Esta semana</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="mb-0">Ingresos Loterías</h6>
+                                        <i class="bi bi-currency-dollar text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <h2 class="mb-0" id="lottery-revenue">-</h2>
+                                    <small class="text-muted">Total recaudado</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="row g-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-trophy"></i>
+                                        <h3>Loterías Activas</h3>
+                                    </div>
+                                    <a href="/lottery-admin.html" target="_blank" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-gear"></i>
+                                        Gestionar Loterías
+                                    </a>
+                                </div>
+                                <div class="card-body">
+                                    <div id="active-lotteries-container" class="row g-3">
+                                        <!-- Las loterías activas se cargarán aquí -->
+                                        <div class="col-12 text-center" id="loading-lotteries">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                            <p class="text-muted mt-2">Cargando loterías activas...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-4 mt-1">
                         <div class="col-12 col-lg-8">
                             <div class="card">
                                 <div class="card-header">
@@ -975,6 +1139,10 @@
                                         <button class="btn btn-primary" onclick="navigateToTab('news')">
                                             <i class="bi bi-plus-circle"></i>
                                             Nueva Noticia
+                                        </button>
+                                        <button class="btn btn-warning" onclick="window.open('/lottery-admin.html', '_blank')">
+                                            <i class="bi bi-trophy"></i>
+                                            Gestionar Loterías
                                         </button>
                                         <button class="btn btn-outline" onclick="navigateToTab('users')">
                                             <i class="bi bi-person-plus"></i>
@@ -1470,22 +1638,216 @@
                     const stats = await statsResponse.json();
                     
                     // Update dashboard cards
-                    document.getElementById('total-news').textContent = stats.totalNews || '0';
-                    document.getElementById('total-users').textContent = stats.totalUsers || '0';
-                    document.getElementById('total-comments').textContent = stats.totalComments || '0';
-                    document.getElementById('total-com').textContent = stats.totalCom || '0';
-                    document.getElementById('total-feed').textContent = stats.totalFeed || '0';
-                    document.getElementById('total-likes').textContent = stats.totalLikes || '0';
-                    document.getElementById('total-com-comments').textContent = stats.totalComComments || '0';
+                    safeSetText('total-news', stats.totalNews || '0');
+                    safeSetText('total-users', stats.totalUsers || '0');
+                    safeSetText('total-comments', stats.totalComments || '0');
+                    safeSetText('total-com', stats.totalCom || '0');
+                    safeSetText('total-feed', stats.totalFeed || '0');
+                    safeSetText('total-likes', stats.totalLikes || '0');
+                    safeSetText('total-com-comments', stats.totalComComments || '0');
                     
                     showNotification('Datos del dashboard actualizados correctamente', 'success');
                 } else {
                     const errorData = await statsResponse.json();
                     showNotification(`Error al cargar estadísticas: ${errorData.error || 'Error desconocido'}`, 'error');
                 }
+                
+                // Load lottery statistics
+                await loadLotteryStats();
+                
+                // Load active lotteries
+                await loadActiveLotteries();
+                
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 showNotification('Error de conexión al cargar estadísticas', 'error');
+            }
+        }
+        
+        // === LOTTERY FUNCTIONS ===
+        async function loadLotteryStats() {
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch('/api/v1/lotteries?status=active&limit=100', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const lotteries = data.data || [];
+                    
+                    // Calculate lottery statistics
+                    let totalParticipants = 0;
+                    let totalTicketsSold = 0;
+                    let totalRevenue = 0;
+                    
+                    for (const lottery of lotteries) {
+                        try {
+                            // Get detailed stats for each lottery
+                            const statsResponse = await fetch(`/api/v1/lotteries/${lottery.id}/stats`, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (statsResponse.ok) {
+                                const stats = await statsResponse.json();
+                                totalParticipants += stats.data.unique_participants || 0;
+                                totalTicketsSold += stats.data.total_tickets_sold || 0;
+                                totalRevenue += stats.data.total_revenue || 0;
+                            }
+                        } catch (e) {
+                            console.warn(`Error loading stats for lottery ${lottery.id}:`, e);
+                        }
+                    }
+                    
+                    // Update lottery statistics cards
+                    safeSetText('active-lotteries', lotteries.length);
+                    safeSetText('total-participants', totalParticipants);
+                    safeSetText('total-tickets-sold', totalTicketsSold);
+                    safeSetText('lottery-revenue', `$${totalRevenue.toLocaleString()}`);
+                    
+                } else {
+                    console.warn('Error loading lottery stats:', response.statusText);
+                    // Set default values
+                    safeSetText('active-lotteries', '0');
+                    safeSetText('total-participants', '0');
+                    safeSetText('total-tickets-sold', '0');
+                    safeSetText('lottery-revenue', '$0');
+                }
+            } catch (error) {
+                console.error('Error loading lottery statistics:', error);
+                // Set default values
+                safeSetText('active-lotteries', '0');
+                safeSetText('total-participants', '0');
+                safeSetText('total-tickets-sold', '0');
+                safeSetText('lottery-revenue', '$0');
+            }
+        }
+        
+        async function loadActiveLotteries() {
+            const token = localStorage.getItem('authToken');
+            const container = document.getElementById('active-lotteries-container');
+            const loadingElement = document.getElementById('loading-lotteries');
+            
+            if (!container) {
+                console.warn('active-lotteries-container no encontrado en el DOM');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/lotteries?status=active&limit=6', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const lotteries = data.data || [];
+                    
+                    // Remove loading indicator
+                    if (loadingElement) {
+                        loadingElement.remove();
+                    }
+                    
+                    if (lotteries.length === 0) {
+                        container.innerHTML = `
+                            <div class="col-12 text-center">
+                                <i class="bi bi-trophy" style="font-size: 3rem; color: var(--text-muted);"></i>
+                                <p class="text-muted mt-2">No hay loterías activas en este momento</p>
+                                <a href="/lottery-admin.html" target="_blank" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Crear Nueva Lotería
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = lotteries.map(lottery => {
+                            const endDate = new Date(lottery.end_date);
+                            const now = new Date();
+                            const timeLeft = endDate - now;
+                            const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
+                            
+                            const progressPercentage = lottery.max_tickets > 0 ? 
+                                ((lottery.tickets_sold || 0) / lottery.max_tickets * 100).toFixed(1) : 0;
+                            
+                                                         return `
+                                 <div class="col-12 col-md-6 col-lg-4">
+                                     <div class="card lottery-card h-100">
+                                         <div class="card-body">
+                                             <div class="d-flex justify-content-between align-items-start mb-2">
+                                                 <h6 class="lottery-title mb-0" title="${lottery.title}">
+                                                     ${lottery.title.length > 30 ? lottery.title.substring(0, 30) + '...' : lottery.title}
+                                                 </h6>
+                                                 <span class="lottery-badge bg-success">Activa</span>
+                                             </div>
+                                             
+                                             <p class="lottery-description small mb-3">
+                                                 ${lottery.description ? 
+                                                     (lottery.description.length > 80 ? lottery.description.substring(0, 80) + '...' : lottery.description)
+                                                     : 'Sin descripción'}
+                                             </p>
+                                             
+                                             <div class="mb-3">
+                                                 <div class="d-flex justify-content-between align-items-center mb-1">
+                                                     <small class="text-muted">Participación</small>
+                                                     <small class="text-muted">${lottery.tickets_sold || 0}/${lottery.max_tickets}</small>
+                                                 </div>
+                                                 <div class="lottery-progress">
+                                                     <div class="progress" style="height: 8px;">
+                                                         <div class="progress-bar bg-success" style="width: ${progressPercentage}%"></div>
+                                                     </div>
+                                                 </div>
+                                                 <small class="text-muted">${progressPercentage}% completado</small>
+                                             </div>
+                                             
+                                             <div class="row g-2 text-center mb-3">
+                                                 <div class="col-6">
+                                                     <div class="lottery-stats-box">
+                                                         <div class="fw-bold text-warning">${lottery.is_free ? 'GRATIS' : '$' + (lottery.ticket_price || 0)}</div>
+                                                         <small class="text-muted">Precio</small>
+                                                     </div>
+                                                 </div>
+                                                 <div class="col-6">
+                                                     <div class="lottery-stats-box">
+                                                         <div class="fw-bold text-info">${daysLeft > 0 ? daysLeft + 'd' : 'Finalizada'}</div>
+                                                         <small class="text-muted">Tiempo</small>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                             
+                                             <div class="lottery-actions d-grid gap-2">
+                                                 <a href="/lottery.html" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                     <i class="bi bi-eye"></i>
+                                                     Ver Pública
+                                                 </a>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             `;
+                        }).join('');
+                    }
+                } else {
+                    throw new Error('Error loading lotteries');
+                }
+            } catch (error) {
+                console.error('Error loading active lotteries:', error);
+                if (loadingElement) {
+                    loadingElement.innerHTML = `
+                        <div class="col-12 text-center">
+                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2">Error al cargar loterías activas</p>
+                            <button class="btn btn-outline-primary btn-sm" onclick="loadActiveLotteries()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                                Reintentar
+                            </button>
+                        </div>
+                    `;
+                }
             }
         }
         
@@ -1944,6 +2306,26 @@
             });
         }
         
+        // Función para verificar autenticación
+        function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                console.warn('No hay token de autenticación');
+                return false;
+            }
+            return true;
+        }
+        
+        // Función helper para establecer texto de forma segura
+        function safeSetText(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = value;
+            } else {
+                console.warn(`Elemento '${elementId}' no encontrado en el DOM`);
+            }
+        }
+        
         // Función para cargar estadísticas del dashboard
         async function loadDashboardStats() {
             if (!checkAuth()) return;
@@ -1960,17 +2342,17 @@
                 
                 if (newsResponse.ok) {
                     const newsData = await newsResponse.json();
-                    document.getElementById('total-news').textContent = newsData.pagination?.total || 0;
+                    safeSetText('total-news', newsData.pagination?.total || 0);
                 }
                 
                 // Cargar estadísticas de usuarios (placeholder)
-                document.getElementById('total-users').textContent = '1';
+                safeSetText('total-users', '1');
                 
                 // Cargar estadísticas de likes (placeholder)
-                document.getElementById('total-likes').textContent = '0';
+                safeSetText('total-likes', '0');
                 
                 // Cargar estadísticas de comentarios (placeholder)
-                document.getElementById('total-comments').textContent = '0';
+                safeSetText('total-comments', '0');
                 
             } catch (error) {
                 showNotification('Error cargando estadísticas', 'error');

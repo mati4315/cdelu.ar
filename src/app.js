@@ -10,6 +10,7 @@ const docsRoutes = require('./routes/docs.routes.js');
 const feedRoutes = require('./routes/feed.routes.js');
 const mobileRoutes = require('./routes/mobile.routes.js');
 const adsRoutes = require('./routes/ads.routes.js');
+const lotteryRoutes = require('./routes/lottery.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
@@ -267,6 +268,7 @@ fastify.register(docsRoutes);
 fastify.register(feedRoutes);
 fastify.register(mobileRoutes);
 fastify.register(adsRoutes);
+fastify.register(lotteryRoutes);
 
 // Ruta específica para el dashboard (opcional)
 fastify.get('/dashboard', async (request, reply) => {
@@ -278,7 +280,7 @@ fastify.get('/', async (request, reply) => {
   return reply.redirect('/dashboard.html');
 });
 
-// Hook de autenticación mejorado
+// Hook para headers globales
 fastify.addHook('onRequest', async (request, reply) => {
     // Agregar headers específicos para apps móviles
     reply.header('X-API-Version', '1.0.0');
@@ -289,50 +291,6 @@ fastify.addHook('onRequest', async (request, reply) => {
         reply.header('Access-Control-Allow-Origin', request.headers.origin);
     }
     reply.header('Access-Control-Allow-Credentials', 'true');
-    
-    // Lista de rutas públicas que no requieren autenticación
-    const publicRoutes = [
-        '/api/v1/auth/',
-        '/health',
-        '/public/',
-        '/dashboard',
-        '/',
-        '/favicon.ico',
-        '/api/v1/docs',  // Añadido para permitir acceso a Swagger UI
-        '/api/v1/health', // Endpoint de health check
-        '/api/v1/mobile/', // Endpoints móviles (todos públicos)
-        '/api/v1/ads/active', // Endpoint público para anuncios activos
-        '/api/v1/ads/' // Endpoints de tracking de anuncios (públicos)
-    ];
-    
-    // Verificar si es una ruta pública
-    const isPublicRoute = publicRoutes.some(route => 
-        request.url.startsWith(route)
-    );
-    
-    // Las rutas GET de noticias son públicas
-    const isPublicNewsRoute = request.method === 'GET' && 
-        request.url.startsWith('/api/v1/news');
-    
-    // Las rutas GET del feed son públicas
-    const isPublicFeedRoute = request.method === 'GET' && 
-        request.url.startsWith('/api/v1/feed');
-    
-    if (isPublicRoute || isPublicNewsRoute || isPublicFeedRoute) {
-        return;
-    }
-    
-    // Aplicar autenticación a las demás rutas
-    try {
-        await request.jwtVerify();
-        request.user = request.user; // Asegurarse de que request.user esté poblado
-    } catch (err) {
-        reply.code(401).send({ 
-            error: 'No autorizado',
-            message: 'Token inválido o expirado. Por favor inicie sesión nuevamente.',
-            code: 'UNAUTHORIZED'
-        });
-    }
 });
 
 // Manejador de errores global mejorado
