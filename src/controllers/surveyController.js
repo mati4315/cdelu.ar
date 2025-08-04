@@ -77,11 +77,16 @@ class SurveyController {
     try {
       const { id } = request.params;
       
-      // Obtener encuesta
-      const [surveys] = await pool.execute(
-        'SELECT * FROM surveys WHERE id = ?',
-        [id]
-      );
+      // Obtener encuesta con total de votos
+      const [surveys] = await pool.execute(`
+        SELECT 
+          s.*,
+          COUNT(DISTINCT sv.id) as total_votes
+        FROM surveys s
+        LEFT JOIN survey_votes sv ON s.id = sv.survey_id
+        WHERE s.id = ?
+        GROUP BY s.id
+      `, [id]);
       
       if (surveys.length === 0) {
         return reply.code(404).send({
@@ -93,16 +98,20 @@ class SurveyController {
       
       const survey = surveys[0];
       
-      // Obtener opciones con estadísticas
+      // Obtener opciones con estadísticas calculadas correctamente
       const [options] = await pool.execute(`
         SELECT 
-          so.*,
-          ROUND((so.votes_count / NULLIF(s.total_votes, 0)) * 100, 2) as percentage
+          so.id,
+          so.option_text,
+          so.display_order,
+          COUNT(sv.id) as votes_count,
+          ROUND((COUNT(sv.id) / NULLIF(?, 0)) * 100, 2) as percentage
         FROM survey_options so
-        JOIN surveys s ON so.survey_id = s.id
+        LEFT JOIN survey_votes sv ON so.id = sv.option_id
         WHERE so.survey_id = ?
+        GROUP BY so.id, so.option_text, so.display_order
         ORDER BY so.display_order, so.id
-      `, [id]);
+      `, [survey.total_votes, id]);
       
       survey.options = options;
       
@@ -148,14 +157,14 @@ class SurveyController {
   // Crear nueva encuesta (solo administradores)
   async createSurvey(request, reply) {
     try {
-      const { title, description, question, options, is_multiple_choice = false, max_votes_per_user = 1, expires_at = null } = request.body;
+      const { question, options, is_multiple_choice = false, max_votes_per_user = 1, expires_at = null } = request.body;
       
       // Validaciones
-      if (!title || !question || !options || !Array.isArray(options) || options.length < 2) {
+      if (!question || !options || !Array.isArray(options) || options.length < 2) {
         return reply.code(400).send({
           success: false,
           error: 'Datos inválidos',
-          message: 'Se requiere título, pregunta y al menos 2 opciones'
+          message: 'Se requiere pregunta y al menos 2 opciones'
         });
       }
       
@@ -166,9 +175,9 @@ class SurveyController {
       try {
         // Crear encuesta
         const [surveyResult] = await connection.execute(
-          `INSERT INTO surveys (title, description, question, is_multiple_choice, max_votes_per_user, created_by, expires_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [title, description, question, is_multiple_choice, max_votes_per_user, request.user.id, expires_at]
+          `INSERT INTO surveys (question, is_multiple_choice, max_votes_per_user, created_by, expires_at) 
+           VALUES (?, ?, ?, ?, ?)`,
+          [question, is_multiple_choice, max_votes_per_user, request.user.id, expires_at]
         );
         
         const surveyId = surveyResult.insertId;
@@ -208,7 +217,7 @@ class SurveyController {
   async updateSurvey(request, reply) {
     try {
       const { id } = request.params;
-      const { title, description, question, status, is_multiple_choice, max_votes_per_user, expires_at } = request.body;
+      const { question, status, is_multiple_choice, max_votes_per_user, expires_at } = request.body;
       
       // Verificar que la encuesta existe
       const [surveys] = await pool.execute(
@@ -228,14 +237,6 @@ class SurveyController {
       const updateFields = [];
       const updateValues = [];
       
-      if (title !== undefined) {
-        updateFields.push('title = ?');
-        updateValues.push(title);
-      }
-      if (description !== undefined) {
-        updateFields.push('description = ?');
-        updateValues.push(description);
-      }
       if (question !== undefined) {
         updateFields.push('question = ?');
         updateValues.push(question);
@@ -328,6 +329,15 @@ class SurveyController {
       const { id } = request.params;
       const { option_ids } = request.body;
       
+      // Verificar que el usuario esté autenticado
+      if (!request.user || !request.user.id) {
+        return reply.code(401).send({
+          success: false,
+          error: 'No autorizado',
+          message: 'Debes estar logueado para votar en las encuestas'
+        });
+      }
+      
       // Validar que option_ids sea un array
       if (!Array.isArray(option_ids) || option_ids.length === 0) {
         return reply.code(400).send({
@@ -354,9 +364,10 @@ class SurveyController {
       const survey = surveys[0];
       
       // Verificar que las opciones existen y pertenecen a esta encuesta
+      const placeholders = option_ids.map(() => '?').join(',');
       const [options] = await pool.execute(
-        'SELECT id FROM survey_options WHERE id IN (?) AND survey_id = ?',
-        [option_ids, id]
+        `SELECT id FROM survey_options WHERE id IN (${placeholders}) AND survey_id = ?`,
+        [...option_ids, id]
       );
       
       if (options.length !== option_ids.length) {
@@ -376,13 +387,10 @@ class SurveyController {
         });
       }
       
-      // Verificar si el usuario ya votó
-      const userIdentifier = request.user ? request.user.id : request.ip;
-      const userField = request.user ? 'user_id' : 'user_ip';
-      
+      // Verificar si el usuario ya votó (solo por user_id ahora)
       const [existingVotes] = await pool.execute(
-        `SELECT option_id FROM survey_votes WHERE survey_id = ? AND ${userField} = ?`,
-        [id, userIdentifier]
+        'SELECT option_id FROM survey_votes WHERE survey_id = ? AND user_id = ?',
+        [id, request.user.id]
       );
       
       if (existingVotes.length > 0) {
@@ -398,11 +406,11 @@ class SurveyController {
       await connection.beginTransaction();
       
       try {
-        // Insertar votos
+        // Insertar votos (solo con user_id)
         for (const optionId of option_ids) {
           await connection.execute(
-            `INSERT INTO survey_votes (survey_id, option_id, ${userField}, user_agent) VALUES (?, ?, ?, ?)`,
-            [id, optionId, userIdentifier, request.headers['user-agent'] || null]
+            'INSERT INTO survey_votes (survey_id, option_id, user_id, user_ip, user_agent) VALUES (?, ?, ?, ?, ?)',
+            [id, optionId, request.user.id, request.ip, request.headers['user-agent'] || null]
           );
         }
         
@@ -487,9 +495,10 @@ class SurveyController {
     try {
       const { limit = 5 } = request.query;
       
+      // Obtener encuestas activas con total de votos
       const [surveys] = await pool.execute(`
         SELECT 
-          s.id, s.title, s.question, s.is_multiple_choice, s.max_votes_per_user,
+          s.id, s.question, s.is_multiple_choice, s.max_votes_per_user,
           COUNT(DISTINCT so.id) as options_count,
           COUNT(DISTINCT sv.id) as total_votes
         FROM surveys s
@@ -501,12 +510,22 @@ class SurveyController {
         LIMIT ?
       `, [parseInt(limit)]);
       
-      // Obtener opciones para cada encuesta
+      // Obtener opciones con conteo de votos para cada encuesta
       for (let survey of surveys) {
-        const [options] = await pool.execute(
-          'SELECT id, option_text FROM survey_options WHERE survey_id = ? ORDER BY display_order, id',
-          [survey.id]
-        );
+        const [options] = await pool.execute(`
+          SELECT 
+            so.id, 
+            so.option_text,
+            so.display_order,
+            COUNT(sv.id) as votes_count,
+            ROUND((COUNT(sv.id) / NULLIF(?, 0)) * 100, 2) as percentage
+          FROM survey_options so
+          LEFT JOIN survey_votes sv ON so.id = sv.option_id
+          WHERE so.survey_id = ?
+          GROUP BY so.id, so.option_text, so.display_order
+          ORDER BY so.display_order, so.id
+        `, [survey.total_votes, survey.id]);
+        
         survey.options = options;
       }
       
