@@ -94,13 +94,18 @@ async function surveyRoutes(fastify, options) {
                   max_votes_per_user: { type: 'integer' },
                   total_votes: { type: 'integer' },
                   options_count: { type: 'integer' },
+                  has_voted: { type: 'boolean' },
+                  show_options: { type: 'boolean' },
                   options: {
                     type: 'array',
                     items: {
                       type: 'object',
                       properties: {
                         id: { type: 'integer' },
-                        option_text: { type: 'string' }
+                        option_text: { type: 'string' },
+                        display_order: { type: 'integer' },
+                        votes_count: { type: 'integer' },
+                        percentage: { type: 'string' }
                       }
                     }
                   }

@@ -498,8 +498,11 @@ class SurveyController {
   // Obtener encuestas activas para el frontend
   async getActiveSurveys(request, reply) {
     try {
+      console.log('🔍 DEBUG: getActiveSurveys iniciado');
       const { limit = 5 } = request.query;
       const userId = request.user ? request.user.id : null;
+      
+      console.log(`🔍 DEBUG: limit=${limit}, userId=${userId}`);
       
       // Obtener encuestas activas con total de votos
       const [surveys] = await pool.execute(`
@@ -516,8 +519,12 @@ class SurveyController {
         LIMIT ?
       `, [parseInt(limit)]);
       
+      console.log(`🔍 DEBUG: Encuestas encontradas: ${surveys.length}`);
+      
       // Obtener opciones con conteo de votos y verificar estado de votación para cada encuesta
       for (let survey of surveys) {
+        console.log(`🔍 DEBUG: Procesando survey ${survey.id} con ${survey.total_votes} votos totales`);
+        
         // Obtener opciones con estadísticas
         const [options] = await pool.execute(`
           SELECT 
@@ -533,38 +540,43 @@ class SurveyController {
           ORDER BY so.display_order, so.id
         `, [survey.total_votes, survey.id]);
         
+        console.log(`🔍 DEBUG: Opciones para survey ${survey.id}:`, options);
+        
         // Verificar si el usuario ya votó (sistema de estado binario)
         let hasVoted = false;
         if (userId) {
+          // Solo usuarios autenticados pueden votar
+          console.log(`🔍 DEBUG: Usuario autenticado ${userId}, verificando votos...`);
           const [userVote] = await pool.execute(`
             SELECT id FROM survey_votes 
             WHERE survey_id = ? AND user_id = ? AND has_voted = TRUE
             LIMIT 1
           `, [survey.id, userId]);
           hasVoted = userVote.length > 0;
+          console.log(`🔍 DEBUG: Usuario ${userId} - Votos encontrados: ${userVote.length}, hasVoted: ${hasVoted}`);
         } else {
-          // Para usuarios anónimos, verificar por IP
-          const userIp = request.ip;
-          const [ipVote] = await pool.execute(`
-            SELECT id FROM survey_votes 
-            WHERE survey_id = ? AND user_ip = ? AND has_voted = TRUE
-            LIMIT 1
-          `, [survey.id, userIp]);
-          hasVoted = ipVote.length > 0;
+          // Usuarios anónimos/invitados NO pueden votar
+          // Siempre mostrar opciones para que puedan ver la encuesta y hacer login
+          hasVoted = false;
+          console.log(`🔍 DEBUG: Usuario anónimo - No puede votar, mostrando opciones para login`);
         }
         
         // Agregar campos del sistema de estado binario
         survey.has_voted = hasVoted;
         survey.show_options = !hasVoted; // true si no ha votado, false si ya votó
         survey.options = options;
+        
+        console.log(`🔍 DEBUG: Survey ${survey.id} preparado con has_voted=${hasVoted}, show_options=${!hasVoted}, opciones=${options.length}`);
       }
+      
+      console.log('🔍 DEBUG: Enviando respuesta con', surveys.length, 'encuestas');
       
       reply.send({
         success: true,
         data: surveys
       });
     } catch (error) {
-      console.error('Error al obtener encuestas activas:', error);
+      console.error('❌ ERROR en getActiveSurveys:', error);
       reply.code(500).send({
         success: false,
         error: 'Error interno del servidor',
