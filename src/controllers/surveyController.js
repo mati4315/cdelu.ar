@@ -406,10 +406,10 @@ class SurveyController {
       await connection.beginTransaction();
       
       try {
-        // Insertar votos (solo con user_id)
+        // Insertar votos con has_voted = TRUE
         for (const optionId of option_ids) {
           await connection.execute(
-            'INSERT INTO survey_votes (survey_id, option_id, user_id, user_ip, user_agent) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO survey_votes (survey_id, option_id, user_id, user_ip, user_agent, has_voted) VALUES (?, ?, ?, ?, ?, TRUE)',
             [id, optionId, request.user.id, request.ip, request.headers['user-agent'] || null]
           );
         }
@@ -418,7 +418,12 @@ class SurveyController {
         
         reply.send({
           success: true,
-          message: 'Voto registrado exitosamente'
+          message: 'Voto registrado exitosamente',
+          data: {
+            survey_id: id,
+            has_voted: true,
+            show_options: false
+          }
         });
       } catch (error) {
         await connection.rollback();
@@ -494,6 +499,7 @@ class SurveyController {
   async getActiveSurveys(request, reply) {
     try {
       const { limit = 5 } = request.query;
+      const userId = request.user ? request.user.id : null;
       
       // Obtener encuestas activas con total de votos
       const [surveys] = await pool.execute(`
@@ -510,8 +516,9 @@ class SurveyController {
         LIMIT ?
       `, [parseInt(limit)]);
       
-      // Obtener opciones con conteo de votos para cada encuesta
+      // Obtener opciones con conteo de votos y verificar estado de votación para cada encuesta
       for (let survey of surveys) {
+        // Obtener opciones con estadísticas
         const [options] = await pool.execute(`
           SELECT 
             so.id, 
@@ -526,6 +533,29 @@ class SurveyController {
           ORDER BY so.display_order, so.id
         `, [survey.total_votes, survey.id]);
         
+        // Verificar si el usuario ya votó (sistema de estado binario)
+        let hasVoted = false;
+        if (userId) {
+          const [userVote] = await pool.execute(`
+            SELECT id FROM survey_votes 
+            WHERE survey_id = ? AND user_id = ? AND has_voted = TRUE
+            LIMIT 1
+          `, [survey.id, userId]);
+          hasVoted = userVote.length > 0;
+        } else {
+          // Para usuarios anónimos, verificar por IP
+          const userIp = request.ip;
+          const [ipVote] = await pool.execute(`
+            SELECT id FROM survey_votes 
+            WHERE survey_id = ? AND user_ip = ? AND has_voted = TRUE
+            LIMIT 1
+          `, [survey.id, userIp]);
+          hasVoted = ipVote.length > 0;
+        }
+        
+        // Agregar campos del sistema de estado binario
+        survey.has_voted = hasVoted;
+        survey.show_options = !hasVoted; // true si no ha votado, false si ya votó
         survey.options = options;
       }
       

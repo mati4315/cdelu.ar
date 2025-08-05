@@ -1222,6 +1222,14 @@
                                             <i class="bi bi-graph-up"></i>
                                             Ver Estadísticas
                                         </button>
+                                        <button class="btn btn-danger" onclick="purgeCache()">
+                                            <i class="bi bi-trash3"></i>
+                                            Purgar Caché
+                                        </button>
+                                        <button class="btn btn-warning" onclick="showMaintenanceModal()">
+                                            <i class="bi bi-tools"></i>
+                                            Mantenimiento
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1493,6 +1501,98 @@
                     </div>
                 </div>
                 
+                <!-- Maintenance Modal -->
+                <div class="login-modal" id="maintenanceModal" style="display: none;">
+                    <form class="login-form" id="maintenanceForm" style="max-width: 700px;">
+                        <div class="login-header">
+                            <h2>Panel de Mantenimiento</h2>
+                            <p>Herramientas de administración del sistema</p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h5><i class="bi bi-database"></i> Base de Datos</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <button type="button" class="btn btn-outline btn-sm mb-2 w-100" onclick="checkDatabaseStatus()">
+                                            <i class="bi bi-check-circle"></i>
+                                            Verificar Estado BD
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm mb-2 w-100" onclick="optimizeDatabase()">
+                                            <i class="bi bi-speedometer2"></i>
+                                            Optimizar BD
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm w-100" onclick="backupDatabase()">
+                                            <i class="bi bi-download"></i>
+                                            Backup BD
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h5><i class="bi bi-gear"></i> Sistema</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <button type="button" class="btn btn-outline btn-sm mb-2 w-100" onclick="checkSystemStatus()">
+                                            <i class="bi bi-activity"></i>
+                                            Estado del Sistema
+                                        </button>
+                                        <button type="button" class="btn btn-info btn-sm mb-2 w-100" onclick="clearLogs()">
+                                            <i class="bi bi-file-earmark-text"></i>
+                                            Limpiar Logs
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm w-100" onclick="restartServices()">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                            Reiniciar Servicios
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5><i class="bi bi-shield-check"></i> Seguridad</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-outline btn-sm mb-2 w-100" onclick="checkSecurityStatus()">
+                                            <i class="bi bi-shield"></i>
+                                            Verificar Seguridad
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm w-100" onclick="updateSecurityKeys()">
+                                            <i class="bi bi-key"></i>
+                                            Actualizar Claves
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-info btn-sm mb-2 w-100" onclick="checkRateLimits()">
+                                            <i class="bi bi-graph-up"></i>
+                                            Límites de Tasa
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm w-100" onclick="blockSuspiciousIPs()">
+                                            <i class="bi bi-ban"></i>
+                                            Bloquear IPs
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline" onclick="closeMaintenanceModal()">
+                                Cerrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
                 <!-- Login Modal -->
                 <div class="login-modal" id="loginModal" style="display: none;">
                 
@@ -1580,6 +1680,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/maintenance.js"></script>
     <script>
         // === THEME MANAGEMENT ===
         const themeToggle = document.getElementById('themeToggle');
@@ -1839,10 +1940,7 @@
                     safeSetText('total-news', stats.totalNews || '0');
                     safeSetText('total-users', stats.totalUsers || '0');
                     safeSetText('total-comments', stats.totalComments || '0');
-                    safeSetText('total-com', stats.totalCom || '0');
-                    safeSetText('total-feed', stats.totalFeed || '0');
                     safeSetText('total-likes', stats.totalLikes || '0');
-                    safeSetText('total-com-comments', stats.totalComComments || '0');
                     
                     showNotification('Datos del dashboard actualizados correctamente', 'success');
                 } else {
@@ -2911,6 +3009,7 @@
                 fetch(`/api/v1/lotteries/${lotteryId}`, {
                     method: 'DELETE',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     }
                 })
@@ -2926,6 +3025,308 @@
                 .catch(error => {
                     console.error('Error deleting lottery:', error);
                     showNotification('Error al eliminar la lotería', 'error');
+                });
+            }
+        }
+
+        // === MAINTENANCE FUNCTIONS ===
+        
+        function purgeCache() {
+            if (confirm('¿Estás seguro de que quieres purgar la caché del sistema? Esto puede afectar temporalmente el rendimiento.')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Purgando caché...', 'info');
+                
+                fetch('/api/v1/admin/purge-cache', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Caché purgada exitosamente', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al purgar caché', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error purging cache:', error);
+                    showNotification('Error al purgar la caché', 'error');
+                });
+            }
+        }
+
+        function showMaintenanceModal() {
+            document.getElementById('maintenanceModal').style.display = 'flex';
+        }
+
+        function closeMaintenanceModal() {
+            document.getElementById('maintenanceModal').style.display = 'none';
+        }
+
+        function checkDatabaseStatus() {
+            const token = localStorage.getItem('authToken');
+            showNotification('Verificando estado de la base de datos...', 'info');
+            
+            fetch('/api/v1/admin/database/status', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Estado BD: ${data.data.status}`, 'success');
+                } else {
+                    showNotification(data.message || 'Error al verificar BD', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking database:', error);
+                showNotification('Error al verificar la base de datos', 'error');
+            });
+        }
+
+        function optimizeDatabase() {
+            if (confirm('¿Estás seguro de que quieres optimizar la base de datos? Esto puede tomar varios minutos.')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Optimizando base de datos...', 'info');
+                
+                fetch('/api/v1/admin/database/optimize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Base de datos optimizada exitosamente', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al optimizar BD', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error optimizing database:', error);
+                    showNotification('Error al optimizar la base de datos', 'error');
+                });
+            }
+        }
+
+        function backupDatabase() {
+            if (confirm('¿Estás seguro de que quieres crear un backup de la base de datos?')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Creando backup de la base de datos...', 'info');
+                
+                fetch('/api/v1/admin/database/backup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Backup creado exitosamente', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al crear backup', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error creating backup:', error);
+                    showNotification('Error al crear el backup', 'error');
+                });
+            }
+        }
+
+        function checkSystemStatus() {
+            const token = localStorage.getItem('authToken');
+            showNotification('Verificando estado del sistema...', 'info');
+            
+            fetch('/api/v1/admin/system/status', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Estado del sistema: ${data.data.status}`, 'success');
+                } else {
+                    showNotification(data.message || 'Error al verificar sistema', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking system:', error);
+                showNotification('Error al verificar el sistema', 'error');
+            });
+        }
+
+        function clearLogs() {
+            if (confirm('¿Estás seguro de que quieres limpiar los logs del sistema?')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Limpiando logs...', 'info');
+                
+                fetch('/api/v1/admin/system/clear-logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Logs limpiados exitosamente', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al limpiar logs', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing logs:', error);
+                    showNotification('Error al limpiar los logs', 'error');
+                });
+            }
+        }
+
+        function restartServices() {
+            if (confirm('¿Estás seguro de que quieres reiniciar los servicios del sistema? Esto puede causar una breve interrupción.')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Reiniciando servicios...', 'info');
+                
+                fetch('/api/v1/admin/system/restart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Servicios reiniciados exitosamente', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al reiniciar servicios', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error restarting services:', error);
+                    showNotification('Error al reiniciar los servicios', 'error');
+                });
+            }
+        }
+
+        function checkSecurityStatus() {
+            const token = localStorage.getItem('authToken');
+            showNotification('Verificando estado de seguridad...', 'info');
+            
+            fetch('/api/v1/admin/security/status', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Estado de seguridad: ${data.data.status}`, 'success');
+                } else {
+                    showNotification(data.message || 'Error al verificar seguridad', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking security:', error);
+                showNotification('Error al verificar la seguridad', 'error');
+            });
+        }
+
+        function updateSecurityKeys() {
+            if (confirm('¿Estás seguro de que quieres actualizar las claves de seguridad? Esto puede afectar las sesiones activas.')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Actualizando claves de seguridad...', 'info');
+                
+                fetch('/api/v1/admin/security/update-keys', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Claves de seguridad actualizadas', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al actualizar claves', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating security keys:', error);
+                    showNotification('Error al actualizar las claves de seguridad', 'error');
+                });
+            }
+        }
+
+        function checkRateLimits() {
+            const token = localStorage.getItem('authToken');
+            showNotification('Verificando límites de tasa...', 'info');
+            
+            fetch('/api/v1/admin/security/rate-limits', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Límites de tasa: ${data.data.status}`, 'success');
+                } else {
+                    showNotification(data.message || 'Error al verificar límites', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking rate limits:', error);
+                showNotification('Error al verificar los límites de tasa', 'error');
+            });
+        }
+
+        function blockSuspiciousIPs() {
+            if (confirm('¿Estás seguro de que quieres bloquear las IPs sospechosas?')) {
+                const token = localStorage.getItem('authToken');
+                showNotification('Bloqueando IPs sospechosas...', 'info');
+                
+                fetch('/api/v1/admin/security/block-ips', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('IPs bloqueadas exitosamente', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al bloquear IPs', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error blocking IPs:', error);
+                    showNotification('Error al bloquear las IPs', 'error');
                 });
             }
         }

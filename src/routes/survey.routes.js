@@ -5,7 +5,7 @@ async function surveyRoutes(fastify, options) {
   // Middleware para verificar si el usuario es administrador
   const requireAdmin = async (request, reply) => {
     await authenticate(request, reply);
-    await authorize(['admin'])(request, reply);
+    await authorize(['administrador'])(request, reply);
   };
 
   // Rutas públicas (sin autenticación)
@@ -32,8 +32,6 @@ async function surveyRoutes(fastify, options) {
                 type: 'object',
                 properties: {
                   id: { type: 'integer' },
-                  title: { type: 'string' },
-                  description: { type: 'string' },
                   question: { type: 'string' },
                   status: { type: 'string' },
                   is_multiple_choice: { type: 'boolean' },
@@ -91,7 +89,6 @@ async function surveyRoutes(fastify, options) {
                 type: 'object',
                 properties: {
                   id: { type: 'integer' },
-                  title: { type: 'string' },
                   question: { type: 'string' },
                   is_multiple_choice: { type: 'boolean' },
                   max_votes_per_user: { type: 'integer' },
@@ -135,8 +132,6 @@ async function surveyRoutes(fastify, options) {
               type: 'object',
               properties: {
                 id: { type: 'integer' },
-                title: { type: 'string' },
-                description: { type: 'string' },
                 question: { type: 'string' },
                 status: { type: 'string' },
                 is_multiple_choice: { type: 'boolean' },
@@ -187,7 +182,6 @@ async function surveyRoutes(fastify, options) {
               type: 'object',
               properties: {
                 id: { type: 'integer' },
-                title: { type: 'string' },
                 question: { type: 'string' },
                 total_votes: { type: 'integer' },
                 registered_voters: { type: 'integer' },
@@ -212,8 +206,9 @@ async function surveyRoutes(fastify, options) {
     }
   }, surveyController.getSurveyStats);
 
-  // POST /api/v1/surveys/:id/vote - Votar en encuesta (público)
+  // POST /api/v1/surveys/:id/vote - Votar en encuesta (requiere autenticación)
   fastify.post('/api/v1/surveys/:id/vote', {
+    preHandler: authenticate,
     schema: {
       params: {
         type: 'object',
@@ -248,6 +243,14 @@ async function surveyRoutes(fastify, options) {
             error: { type: 'string' },
             message: { type: 'string' }
           }
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            error: { type: 'string' },
+            message: { type: 'string' }
+          }
         }
       }
     }
@@ -262,8 +265,6 @@ async function surveyRoutes(fastify, options) {
       body: {
         type: 'object',
         properties: {
-          title: { type: 'string', minLength: 1, maxLength: 255 },
-          description: { type: 'string' },
           question: { type: 'string', minLength: 1 },
           options: {
             type: 'array',
@@ -275,7 +276,7 @@ async function surveyRoutes(fastify, options) {
           max_votes_per_user: { type: 'integer', minimum: 1, maximum: 10, default: 1 },
           expires_at: { type: 'string', format: 'date-time' }
         },
-        required: ['title', 'question', 'options']
+        required: ['question', 'options']
       },
       response: {
         201: {
@@ -309,8 +310,6 @@ async function surveyRoutes(fastify, options) {
       body: {
         type: 'object',
         properties: {
-          title: { type: 'string', minLength: 1, maxLength: 255 },
-          description: { type: 'string' },
           question: { type: 'string', minLength: 1 },
           status: { type: 'string', enum: ['active', 'inactive', 'completed'] },
           is_multiple_choice: { type: 'boolean' },
