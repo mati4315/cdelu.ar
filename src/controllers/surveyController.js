@@ -378,7 +378,9 @@ class SurveyController {
         });
       }
       
-      // Verificar límite de votos por usuario
+      // ❌ LÍMITE REMOVIDO: Permitir votos ilimitados
+      // Los límites de participación han sido eliminados para permitir que todos participen
+      /*
       if (option_ids.length > survey.max_votes_per_user) {
         return reply.code(400).send({
           success: false,
@@ -386,8 +388,12 @@ class SurveyController {
           message: `Solo se permiten ${survey.max_votes_per_user} voto(s) por usuario`
         });
       }
+      */
       
       // Verificar si el usuario ya votó (solo por user_id ahora)
+      // ❌ VERIFICACIÓN REMOVIDA: Permitir votos múltiples
+      // Los usuarios ahora pueden votar múltiples veces si así lo desean
+      /*
       const [existingVotes] = await pool.execute(
         'SELECT option_id FROM survey_votes WHERE survey_id = ? AND user_id = ?',
         [id, request.user.id]
@@ -400,6 +406,7 @@ class SurveyController {
           message: 'Ya has votado en esta encuesta'
         });
       }
+      */
       
       // Iniciar transacción para insertar votos
       const connection = await pool.getConnection();
@@ -555,10 +562,10 @@ class SurveyController {
           hasVoted = userVote.length > 0;
           console.log(`🔍 DEBUG: Usuario ${userId} - Votos encontrados: ${userVote.length}, hasVoted: ${hasVoted}`);
         } else {
-          // Usuarios anónimos/invitados NO pueden votar
-          // Siempre mostrar opciones para que puedan ver la encuesta y hacer login
+          // Usuarios anónimos/invitados SIEMPRE ven opciones (estado 0)
+          // Esto les permite ver la encuesta y decidir registrarse para votar
           hasVoted = false;
-          console.log(`🔍 DEBUG: Usuario anónimo - No puede votar, mostrando opciones para login`);
+          console.log(`🔍 DEBUG: Usuario anónimo - Mostrando opciones para que pueda registrarse y votar`);
         }
         
         // Agregar campos del sistema de estado binario

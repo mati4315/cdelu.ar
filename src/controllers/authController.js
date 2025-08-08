@@ -43,7 +43,8 @@ async function register(request, reply) {
         id: result.insertId,
         nombre,
         email,
-        rol
+        rol,
+        profile_picture_url: null
       }
     });
   } catch (error) {
@@ -65,7 +66,7 @@ async function login(request, reply) {
 
     // Buscar usuario por email
     const [users] = await pool.query(
-      `SELECT id, nombre, email, password, rol, created_at
+      `SELECT id, nombre, email, password, rol, profile_picture_url, created_at
        FROM users 
        WHERE email = ?`,
       [email]
@@ -111,7 +112,8 @@ async function login(request, reply) {
         id: user.id,
         nombre: user.nombre,
         email: user.email,
-        rol: user.rol
+        rol: user.rol,
+        profile_picture_url: user.profile_picture_url
       }
     };
 

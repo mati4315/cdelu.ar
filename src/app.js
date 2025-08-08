@@ -13,6 +13,7 @@ const adsRoutes = require('./routes/ads.routes.js');
 const lotteryRoutes = require('./routes/lottery.routes.js');
 const surveyRoutes = require('./routes/survey.routes.js');
 const adminRoutes = require('./routes/admin.routes.js');
+const profileRoutes = require('./routes/profile.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
@@ -273,6 +274,7 @@ fastify.register(adsRoutes);
 fastify.register(lotteryRoutes);
 fastify.register(surveyRoutes);
 fastify.register(adminRoutes);
+fastify.register(profileRoutes, { prefix: '/api/v1/profile' });
 
 // Ruta específica para el dashboard (opcional)
 fastify.get('/dashboard', async (request, reply) => {
