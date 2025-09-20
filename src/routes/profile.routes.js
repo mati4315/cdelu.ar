@@ -79,7 +79,19 @@ async function profileRoutes(fastify, options) {
               rol: { type: 'string' },
               profile_picture_url: { type: 'string', nullable: true },
               created_at: { type: 'string', format: 'date-time' },
-              updated_at: { type: 'string', format: 'date-time' }
+              updated_at: { type: 'string', format: 'date-time' },
+              // Campo adicional opcional para compatibilidad con frontend
+              comments_count: { type: 'integer' }
+            }
+          },
+          // Bloque opcional de estadísticas del perfil
+          stats: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              lottery_participations: { type: 'integer' },
+              lottery_wins: { type: 'integer' },
+              community_posts_count: { type: 'integer' }
             }
           }
         }

@@ -179,7 +179,7 @@ async function uploadProfilePicture(request, reply) {
       await deleteProfilePicture(currentProfilePicture);
     }
 
-    reply.status(200).send({
+    return reply.status(200).send({
       message: 'Foto de perfil actualizada correctamente',
       profile_picture_url: newProfilePictureUrl
     });
@@ -222,7 +222,7 @@ async function removeProfilePicture(request, reply) {
     // Eliminar el archivo
     await deleteProfilePicture(currentProfilePicture);
 
-    reply.status(200).send({
+    return reply.status(200).send({
       message: 'Foto de perfil eliminada correctamente'
     });
 
@@ -241,6 +241,7 @@ async function getUserProfile(request, reply) {
   try {
     const userId = request.user.id;
 
+    // Obtener datos básicos del usuario
     const [users] = await pool.query(
       `SELECT id, nombre, email, profile_picture_url, rol, 
               created_at, updated_at
@@ -254,8 +255,49 @@ async function getUserProfile(request, reply) {
     }
 
     const user = users[0];
-    
-    reply.status(200).send({
+
+    // Consultar métricas del perfil en paralelo
+    // - comments_count: total de comentarios del usuario
+    // - lottery_participations: total de loterías en las que participó (tickets pagados)
+    // - lottery_wins: total de loterías/tickets ganados
+    const [
+      [commentsCountRows],
+      [lotteryParticipationsRows],
+      [lotteryWinsRows],
+      [communityPostsRows]
+    ] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) AS comments_count
+         FROM comments
+         WHERE user_id = ?`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COUNT(DISTINCT lottery_id) AS lottery_participations
+         FROM lottery_tickets
+         WHERE user_id = ? AND payment_status = 'paid'`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS lottery_wins
+         FROM lottery_winners
+         WHERE user_id = ?`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS community_posts_count
+         FROM com
+         WHERE user_id = ?`,
+        [userId]
+      )
+    ]);
+
+    const commentsCount = commentsCountRows?.[0]?.comments_count ?? 0;
+    const lotteryParticipations = lotteryParticipationsRows?.[0]?.lottery_participations ?? 0;
+    const lotteryWins = lotteryWinsRows?.[0]?.lottery_wins ?? 0;
+    const communityPostsCount = communityPostsRows?.[0]?.community_posts_count ?? 0;
+
+    return reply.status(200).send({
       user: {
         id: user.id,
         nombre: user.nombre,
@@ -263,7 +305,15 @@ async function getUserProfile(request, reply) {
         rol: user.rol,
         profile_picture_url: user.profile_picture_url,
         created_at: user.created_at,
-        updated_at: user.updated_at
+        updated_at: user.updated_at,
+        // Campo adicional para que el frontend lo consuma directamente si lo prefiere
+        comments_count: commentsCount
+      },
+      // Objeto de estadísticas opcional
+      stats: {
+        lottery_participations: lotteryParticipations,
+        lottery_wins: lotteryWins,
+        community_posts_count: communityPostsCount
       }
     });
 
@@ -295,7 +345,7 @@ async function getPublicUserProfile(request, reply) {
 
     const user = users[0];
     
-    reply.status(200).send({
+    return reply.status(200).send({
       user: {
         id: user.id,
         nombre: user.nombre,

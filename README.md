@@ -112,6 +112,30 @@ RSS_ENABLED=true
 RSS_FEED_URL=https://ejemplo.com/feed
 ```
 
+### 📺 Facebook Live (Opcional)
+
+Para habilitar el widget de Facebook Live en el frontend, configura estas variables y expone tu dominio en CORS:
+
+```env
+FB_PAGE_ID=tu_page_id
+FB_PAGE_TOKEN=tu_page_access_token_largo_plazo
+FB_GRAPH_VERSION=v18.0
+FB_CACHE_TTL_SECONDS=30
+```
+
+El backend expone `GET /api/v1/facebook/live-status` y retorna:
+
+```json
+{
+  "isLive": true,
+  "videoId": "1234567890",
+  "embedUrl": "https://www.facebook.com/plugins/video.php?href=...",
+  "hlsUrl": null,
+  "title": "Título del live",
+  "startedAt": "2025-08-09T12:34:56Z"
+}
+```
+
 ## 📚 Documentación de la API
 
 ### 🌐 Acceso a la Documentación

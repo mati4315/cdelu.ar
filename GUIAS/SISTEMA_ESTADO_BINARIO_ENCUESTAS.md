@@ -32,7 +32,7 @@ CREATE INDEX idx_survey_votes_user_survey ON survey_votes(user_id, survey_id, ha
 
 ### 2. Modificación del Controlador
 
-#### Archivo: `src/controllers/surveyController.js`
+#### Archivo: `src/features/surveys/surveys.controller.js`
 
 #### Método `getActiveSurveys()` - Actualizado:
 

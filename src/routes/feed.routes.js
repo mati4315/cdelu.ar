@@ -327,6 +327,184 @@ async function feedRoutes(fastify, options) {
     }
   });
 
+  // Estado de likes por lista de feedIds
+  fastify.get('/api/v1/feed/likes/status', {
+    onRequest: [authenticate],
+    schema: {
+      tags: ['Feed'],
+      summary: 'Obtener estado de likes por feedIds',
+      description: 'Devuelve un mapa id → liked para los IDs provistos. Para type=3 siempre false.',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          ids: { type: 'string', description: 'Lista de IDs separados por coma, por ejemplo: 1,2,3' }
+        },
+        required: ['ids']
+      },
+      response: {
+        200: {
+          description: 'Mapa de estados de like por feedId',
+          type: 'object',
+          properties: {
+            statuses: {
+              type: 'object',
+              additionalProperties: { type: 'boolean' }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const pool = require('../config/database');
+    const userId = request.user.id;
+    const idsParam = (request.query.ids || '').toString();
+
+    // Parseo de IDs
+    const feedIds = idsParam
+      .split(',')
+      .map((v) => parseInt(v.trim(), 10))
+      .filter((n) => Number.isInteger(n) && n > 0);
+
+    if (feedIds.length === 0) {
+      return reply.send({ statuses: {} });
+    }
+
+    try {
+      // Obtener tipo y original_id por cada feedId
+      const placeholders = feedIds.map(() => '?').join(',');
+      const [feedRows] = await pool.query(
+        `SELECT id, type, original_id FROM content_feed WHERE id IN (${placeholders})`,
+        feedIds
+      );
+
+      // Inicializar en false por defecto
+      const statuses = {};
+      for (const id of feedIds) {
+        statuses[id] = false;
+      }
+
+      if (feedRows.length === 0) {
+        return reply.send({ statuses });
+      }
+
+      // Separar por tipo y mapear original → feedId
+      const type1Map = new Map(); // news_id → feedId
+      const type2Map = new Map(); // com_id → feedId
+      for (const row of feedRows) {
+        if (row.type === 1) type1Map.set(row.original_id, row.id);
+        else if (row.type === 2) type2Map.set(row.original_id, row.id);
+        // type 3 queda en false
+      }
+
+      // Consultar likes para type=1 (noticias)
+      const type1Ids = Array.from(type1Map.keys());
+      if (type1Ids.length > 0) {
+        const ph = type1Ids.map(() => '?').join(',');
+        const [likedNews] = await pool.query(
+          `SELECT news_id FROM likes WHERE user_id = ? AND news_id IN (${ph})`,
+          [userId, ...type1Ids]
+        );
+        for (const r of likedNews) {
+          const feedId = type1Map.get(r.news_id);
+          if (feedId) statuses[feedId] = true;
+        }
+      }
+
+      // Asegurar tabla com_likes y consultar para type=2 (comunidad)
+      const type2Ids = Array.from(type2Map.keys());
+      if (type2Ids.length > 0) {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS com_likes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            com_id INT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_user_com (user_id, com_id),
+            INDEX idx_user_id (user_id),
+            INDEX idx_com_id (com_id)
+          )
+        `);
+
+        const ph = type2Ids.map(() => '?').join(',');
+        const [likedCom] = await pool.query(
+          `SELECT com_id FROM com_likes WHERE user_id = ? AND com_id IN (${ph})`,
+          [userId, ...type2Ids]
+        );
+        for (const r of likedCom) {
+          const feedId = type2Map.get(r.com_id);
+          if (feedId) statuses[feedId] = true;
+        }
+      }
+
+      return reply.send({ statuses });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Error al obtener el estado de likes' });
+    }
+  });
+
+  // IDs del feed que el usuario actual ha likeado
+  fastify.get('/api/v1/feed/likes/my', {
+    onRequest: [authenticate],
+    schema: {
+      tags: ['Feed'],
+      summary: 'Obtener IDs del feed likeados por el usuario actual',
+      description: 'Devuelve una lista de content_feed.id que el usuario actual tiene con like. Para type=3 no devuelve IDs.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          description: 'Lista de IDs likeados',
+          type: 'object',
+          properties: {
+            likedIds: {
+              type: 'array',
+              items: { type: 'integer' }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const pool = require('../config/database');
+    const userId = request.user.id;
+    try {
+      // Asegurar existencia de com_likes para evitar errores en SELECT
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS com_likes (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          com_id INT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_user_com (user_id, com_id),
+          INDEX idx_user_id (user_id),
+          INDEX idx_com_id (com_id)
+        )
+      `);
+
+      const [rows] = await pool.query(
+        `SELECT cf.id
+         FROM content_feed cf
+         WHERE (
+           cf.type = 1 AND EXISTS (
+             SELECT 1 FROM likes l WHERE l.user_id = ? AND l.news_id = cf.original_id
+           )
+         ) OR (
+           cf.type = 2 AND EXISTS (
+             SELECT 1 FROM com_likes cl WHERE cl.user_id = ? AND cl.com_id = cf.original_id
+           )
+         )`,
+        [userId, userId]
+      );
+
+      const likedIds = rows.map((r) => r.id);
+      return reply.send({ likedIds });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Error al obtener los IDs likeados' });
+    }
+  });
+
   // Obtener estadísticas del feed
   fastify.get('/api/v1/feed/stats', {
     schema: {
@@ -442,7 +620,7 @@ async function feedRoutes(fastify, options) {
           [userId, original_id]
         );
 
-        reply.status(201).send({ message: 'Like agregado correctamente' });
+      return reply.status(201).send({ message: 'Like agregado correctamente' });
 
       } else if (type === 2) {
         // Es contenido de comunidad - crear tabla com_likes si no existe
@@ -554,7 +732,7 @@ async function feedRoutes(fastify, options) {
         return reply.status(404).send({ error: 'No se encontró el like' });
       }
 
-      reply.status(200).send({ message: 'Like eliminado correctamente' });
+      return reply.status(200).send({ message: 'Like eliminado correctamente' });
 
     } catch (error) {
       request.log.error(error);
@@ -649,7 +827,7 @@ async function feedRoutes(fastify, options) {
         );
       }
 
-      reply.status(201).send({
+      return reply.status(201).send({
         id: result.insertId,
         message: 'Comentario creado correctamente'
       });
@@ -748,7 +926,7 @@ async function feedRoutes(fastify, options) {
         `, [original_id]);
       }
 
-      reply.send(comments || []);
+      return reply.send(comments || []);
 
     } catch (error) {
       request.log.error(error);
@@ -899,7 +1077,7 @@ async function feedRoutes(fastify, options) {
 
       const message = isCurrentlyLiked ? 'Like agregado correctamente' : 'Like eliminado correctamente';
 
-      reply.status(200).send({
+      return reply.status(200).send({
         liked: isCurrentlyLiked,
         likes_count: newLikesCount,
         message

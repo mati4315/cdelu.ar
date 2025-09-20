@@ -1206,7 +1206,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="d-grid gap-2">
-                                        <button class="btn btn-primary" onclick="navigateToTab('news')">
+                                        <button class="btn btn-primary" id="quickAddNewsBtn" onclick="return false;">
                                             <i class="bi bi-plus-circle"></i>
                                             Nueva Noticia
                                         </button>
@@ -1595,53 +1595,8 @@
                 
                 <!-- Login Modal -->
                 <div class="login-modal" id="loginModal" style="display: none;">
+
                 
-                <!-- News Modal -->
-                <div class="login-modal" id="newsModal" style="display: none;">
-                    <form class="login-form" id="newsForm" style="max-width: 600px;">
-                        <div class="login-header">
-                            <h2 id="newsModalTitle">Nueva Noticia</h2>
-                            <p id="newsModalSubtitle">Crear una nueva noticia para el sitio</p>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Título</label>
-                            <input type="text" class="form-control" id="newsTitle" required placeholder="Título de la noticia">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Descripción</label>
-                            <textarea class="form-control" id="newsDescription" rows="6" required placeholder="Contenido de la noticia"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">URL de la imagen (opcional)</label>
-                            <input type="url" class="form-control" id="newsImageUrl" placeholder="https://ejemplo.com/imagen.jpg">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">URL original (opcional)</label>
-                            <input type="url" class="form-control" id="newsOriginalUrl" placeholder="https://fuente-original.com">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">
-                                <input type="checkbox" id="newsIsOficial" checked>
-                                Noticia oficial (generar contenido con IA)
-                            </label>
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary flex-1">
-                                <span class="news-text">Guardar Noticia</span>
-                                <span class="loading-spinner d-none"></span>
-                            </button>
-                            <button type="button" class="btn btn-outline" id="cancelNewsBtn">
-                                Cancelar
-                            </button>
-                        </div>
-                    </form>
-                </div>
                     <form class="login-form" id="loginForm">
                         <div class="login-header">
                             <h2>Iniciar Sesión</h2>
@@ -1667,6 +1622,37 @@
                             <small class="text-muted">
                                 ¿No tienes cuenta? Contacta al administrador.
                             </small>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- News Import Modal -->
+                <div class="login-modal" id="newsImportModal" style="display: none;">
+                    <form class="login-form" id="newsImportForm" style="max-width: 720px;">
+                        <div class="login-header">
+                            <h2>Importar Noticia</h2>
+                            <p>Traer la noticia desde el RSS ejecutando el script de importación</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Índice de la noticia en el feed (opcional)</label>
+                            <input type="number" min="0" class="form-control" id="newsImportIndex" placeholder="0" value="0">
+                            <small class="text-muted">0 = última noticia; 1, 2, ... para anteriores</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Log de importación</label>
+                            <textarea id="newsImportLog" class="form-control" rows="10" readonly style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;"></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-1">
+                                <span class="import-text">Importar</span>
+                                <span class="loading-spinner d-none"></span>
+                            </button>
+                            <button type="button" class="btn btn-outline" id="cancelNewsImportBtn">
+                                Cancelar
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -2470,10 +2456,123 @@
         }
         
         // Event listeners
-        addNewsBtn.addEventListener('click', addNews);
-        cancelNewsBtn.addEventListener('click', () => {
-            newsModal.style.display = 'none';
+        // Reemplazar acción de "Nueva Noticia" para abrir importación desde RSS
+        const newsImportModal = document.getElementById('newsImportModal');
+        const newsImportForm = document.getElementById('newsImportForm');
+        const cancelNewsImportBtn = document.getElementById('cancelNewsImportBtn');
+        const quickAddNewsBtn = document.getElementById('quickAddNewsBtn');
+
+        function openImportNewsModal() {
+            newsImportModal.style.display = 'flex';
+        }
+
+        function closeImportNewsModal() {
+            newsImportModal.style.display = 'none';
+        }
+
+        if (addNewsBtn) {
+            addNewsBtn.removeEventListener?.('click', addNews);
+            addNewsBtn.addEventListener('click', openImportNewsModal);
+        }
+
+        if (quickAddNewsBtn) {
+            quickAddNewsBtn.addEventListener('click', function() {
+                // Asegura que la pestaña news esté visible y luego abre el modal
+                navigateToTab('news');
+                setTimeout(openImportNewsModal, 50);
+            });
+        }
+
+        cancelNewsImportBtn?.addEventListener('click', closeImportNewsModal);
+
+        newsImportForm?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const importText = newsImportForm.querySelector('.import-text');
+            const loadingSpinner = newsImportForm.querySelector('.loading-spinner');
+            const logArea = document.getElementById('newsImportLog');
+            importText.classList.add('d-none');
+            loadingSpinner.classList.remove('d-none');
+
+            const index = parseInt(document.getElementById('newsImportIndex').value, 10);
+            const token = localStorage.getItem('authToken');
+
+            // Limpiar log
+            if (logArea) logArea.value = '';
+
+            // Stream de eventos (SSE)
+            const url = new URL('/api/v1/news/import/stream', window.location.origin);
+            url.searchParams.set('index', Number.isInteger(index) && index >= 0 ? index : 0);
+
+            const eventSourceInitDict = {
+                headers: { 'Authorization': `Bearer ${token}` }
+            };
+
+            // EventSource no acepta headers nativos. Fallback: fetch SSE manual
+            fetch(url.toString(), { headers: { 'Authorization': `Bearer ${token}` } }).then(async (res) => {
+                if (!res.ok || !res.body) {
+                    throw new Error('No se pudo iniciar el stream');
+                }
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+
+                let buffer = '';
+                const appendLog = (text) => {
+                    if (!logArea) return;
+                    logArea.value += (text + '\n');
+                    logArea.scrollTop = logArea.scrollHeight;
+                };
+
+                appendLog('Iniciando importación...');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    // Procesar eventos SSE simples
+                    let idx;
+                    while ((idx = buffer.indexOf('\n\n')) >= 0) {
+                        const chunk = buffer.slice(0, idx);
+                        buffer = buffer.slice(idx + 2);
+
+                        const lines = chunk.split('\n');
+                        let eventType = 'message';
+                        let data = '';
+                        for (const line of lines) {
+                            if (line.startsWith('event: ')) eventType = line.replace('event: ', '').trim();
+                            if (line.startsWith('data: ')) data += line.replace('data: ', '') + '\n';
+                        }
+                        data = data.trim();
+
+                        if (eventType === 'log') appendLog(data);
+                        else if (eventType === 'error') appendLog('[ERROR] ' + data);
+                        else if (eventType === 'done') {
+                            if (data === 'ok') {
+                                appendLog('Importación completada.');
+                                showNotification('Noticia importada correctamente', 'success');
+                                loadNews();
+                            } else {
+                                appendLog('Importación finalizada con código: ' + data);
+                                showNotification('La importación terminó con errores', 'error');
+                            }
+                        }
+                    }
+                }
+            }).catch((err) => {
+                console.error('SSE error:', err);
+                showNotification(err.message || 'Error al importar la noticia', 'error');
+            }).finally(() => {
+                importText.classList.remove('d-none');
+                loadingSpinner.classList.add('d-none');
+            });
         });
+
+        // Mantener botón de cancelar del modal de creación manual
+        if (cancelNewsBtn && newsModal) {
+            cancelNewsBtn.addEventListener('click', () => {
+                newsModal.style.display = 'none';
+            });
+        }
         
         deleteSelectedBtn.addEventListener('click', deleteSelectedNews);
         

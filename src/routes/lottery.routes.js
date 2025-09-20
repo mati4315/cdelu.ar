@@ -578,6 +578,103 @@ async function lotteryRoutes(fastify, options) {
       });
     }
   });
+
+  // GET /api/v1/lotteries/user/wins - Loterías ganadas por el usuario
+  fastify.get('/api/v1/lotteries/user/wins', {
+    preHandler: async (request, reply) => {
+      await authenticate(request, reply);
+    },
+    schema: {
+      description: 'Obtener lista de loterías ganadas por el usuario autenticado',
+      tags: ['Loterías'],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1, default: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100, default: 50 }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  lottery_id: { type: 'integer' },
+                  lottery_title: { type: 'string' },
+                  lottery_image_url: { type: 'string', nullable: true },
+                  winning_number: { type: 'integer' },
+                  won_at: { type: 'string', format: 'date-time' },
+                  prize_description: { type: 'string', nullable: true }
+                }
+              }
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: { type: 'integer' },
+                pages: { type: 'integer' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.id;
+      const { page = 1, limit = 50 } = request.query;
+      const take = parseInt(limit);
+      const offset = (parseInt(page) - 1) * take;
+
+      const [wins] = await pool.execute(`
+        SELECT 
+          lw.lottery_id,
+          l.title AS lottery_title,
+          l.image_url AS lottery_image_url,
+          lw.ticket_number AS winning_number,
+          lw.created_at AS won_at,
+          l.prize_description
+        FROM lottery_winners lw
+        JOIN lotteries l ON lw.lottery_id = l.id
+        WHERE lw.user_id = ?
+        ORDER BY lw.created_at DESC
+        LIMIT ? OFFSET ?
+      `, [userId, take, offset]);
+
+      const [countResult] = await pool.execute(`
+        SELECT COUNT(*) AS total
+        FROM lottery_winners
+        WHERE user_id = ?
+      `, [userId]);
+
+      const total = countResult[0]?.total || 0;
+
+      return reply.send({
+        success: true,
+        data: wins,
+        pagination: {
+          page: parseInt(page),
+          limit: take,
+          total,
+          pages: Math.ceil(total / take)
+        }
+      });
+    } catch (error) {
+      console.error('Error al obtener loterías ganadas:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Error interno del servidor',
+        error: error.message
+      });
+    }
+  });
   
   // POST /api/lotteries/:id/reserve - Reservar números temporalmente
   fastify.post('/api/v1/lotteries/:id/reserve', {

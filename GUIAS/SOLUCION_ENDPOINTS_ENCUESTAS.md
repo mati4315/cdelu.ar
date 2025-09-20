@@ -11,7 +11,7 @@
 
 ## 1. 🔧 Arreglo del Controlador de Encuestas
 
-### Archivo: `src/controllers/surveyController.js`
+### Archivo: `src/features/surveys/surveys.controller.js`
 
 #### Método `getActiveSurveys()` - ARREGLADO:
 ```javascript

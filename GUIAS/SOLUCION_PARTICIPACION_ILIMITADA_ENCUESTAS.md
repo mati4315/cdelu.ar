@@ -42,7 +42,7 @@ ALTER TABLE survey_votes DROP INDEX unique_ip_vote;
 ### 🔧 Cambios en el Backend
 
 #### 1. Verificación de Límites Removida
-En `src/controllers/surveyController.js`:
+En `src/features/surveys/surveys.controller.js`:
 
 ```javascript
 // ❌ LÍMITE REMOVIDO: Permitir votos ilimitados
@@ -104,7 +104,7 @@ if (existingVotes.length > 0) {
 - ✅ `survey_votes` → Restricciones UNIQUE eliminadas
 
 ### Backend:
-- ✅ `src/controllers/surveyController.js` → Verificaciones removidas
+- ✅ `src/features/surveys/surveys.controller.js` → Verificaciones removidas
 
 ### Scripts Creados:
 - 📄 `check-survey-structure.js` → Diagnóstico

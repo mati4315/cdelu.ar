@@ -12,6 +12,11 @@ const mobileRoutes = require('./routes/mobile.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
+fastify.register(require('@fastify/helmet'), {
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+});
 fastify.register(require('@fastify/cors'), {
   origin: config.corsOrigin,
   credentials: true,

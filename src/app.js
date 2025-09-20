@@ -1,22 +1,39 @@
 const fastify = require('fastify')({ logger: true });
 const path = require('path');
 const config = require('./config/default');
-const newsRoutes = require('./routes/news');
-const authRoutes = require('./routes/auth');
+const featureNewsRoutes = require('./features/news/news.routes');
+const featureAuthRoutes = require('./features/auth/auth.routes');
 const userRoutes = require('./routes/users');
 const statsRoutes = require('./routes/stats');
 const comRoutes = require('./routes/com.routes.js');
 const docsRoutes = require('./routes/docs.routes.js');
 const feedRoutes = require('./routes/feed.routes.js');
 const mobileRoutes = require('./routes/mobile.routes.js');
-const adsRoutes = require('./routes/ads.routes.js');
+const featureAdsRoutes = require('./features/ads/ads.routes');
 const lotteryRoutes = require('./routes/lottery.routes.js');
-const surveyRoutes = require('./routes/survey.routes.js');
+const featureSurveysRoutes = require('./features/surveys/surveys.routes');
+const featureFacebookRoutes = require('./features/facebook/facebook.routes');
 const adminRoutes = require('./routes/admin.routes.js');
 const profileRoutes = require('./routes/profile.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
 
 // Registrar plugins
+// Seguridad básica HTTP headers (relajar políticas para permitir imágenes cross-origin en dev)
+fastify.register(require('@fastify/helmet'), {
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+});
+
+// Cache-Control para estáticos: 7 días (producción) / 0 (desarrollo)
+const isProd = (process.env.NODE_ENV === 'production');
+fastify.addHook('onSend', async (request, reply, payload) => {
+  if (request.raw.url && (request.raw.url.startsWith('/public/') || request.raw.url.endsWith('.html'))) {
+    const maxAge = isProd ? 7 * 24 * 60 * 60 : 0;
+    reply.header('Cache-Control', `public, max-age=${maxAge}`);
+  }
+  return payload;
+});
 fastify.register(require('@fastify/cors'), {
   origin: config.corsOrigin,
   credentials: true,
@@ -121,7 +138,8 @@ fastify.register(require('@fastify/swagger'), {
       { name: 'Estadísticas', description: 'Métricas y estadísticas del sistema' },
       { name: 'Comunicaciones', description: 'Sistema de comunicaciones multimedia' },
       { name: 'Feed', description: 'Feed unificado de contenido (noticias y comunidad)' },
-      { name: 'Documentación', description: 'Endpoints de documentación interna' }
+      { name: 'Documentación', description: 'Endpoints de documentación interna' },
+      { name: 'Facebook Live', description: 'Estado del Live de Facebook y reproducción embebida' }
     ]
   },
   hideUntagged: true,
@@ -262,17 +280,23 @@ fastify.get('/api/v1/status', {
 });
 
 // Registrar rutas
-fastify.register(authRoutes);
-fastify.register(newsRoutes);
+// Auth feature-based (evitar duplicar rutas con legacy)
+fastify.register(featureAuthRoutes);
+// Rutas feature-based (mismo path /api/v1/news, controlador/servicio desacoplados)
+fastify.register(featureNewsRoutes);
 fastify.register(userRoutes);
 fastify.register(statsRoutes);
 fastify.register(comRoutes);
 fastify.register(docsRoutes);
 fastify.register(feedRoutes);
 fastify.register(mobileRoutes);
-fastify.register(adsRoutes);
+// Rutas Ads feature-based
+fastify.register(featureAdsRoutes);
+// Facebook Live
+fastify.register(featureFacebookRoutes);
 fastify.register(lotteryRoutes);
-fastify.register(surveyRoutes);
+// Reemplaza rutas legacy de encuestas por feature-based
+fastify.register(featureSurveysRoutes);
 fastify.register(adminRoutes);
 fastify.register(profileRoutes, { prefix: '/api/v1/profile' });
 
@@ -374,11 +398,14 @@ fastify.setErrorHandler((error, request, reply) => {
 
   // Error de rate limiting (si se implementa)
   if (error.statusCode === 429) {
+    const retrySeconds = Number(error.retryAfter || 900);
+    reply.header('Retry-After', retrySeconds.toString());
     return reply
       .code(429)
-      .send({
-        error: 'Demasiadas solicitudes',
+      .send({ 
+        error: 'Demasiadas solicitudes', 
         message: 'Ha excedido el límite de solicitudes. Intente nuevamente más tarde.',
+        retryAfter: retrySeconds,
         code: 'RATE_LIMIT_EXCEEDED'
       });
   }

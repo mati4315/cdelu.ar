@@ -71,7 +71,7 @@ async function comRoutes(fastify, options) {
   // Crear una nueva entrada 'com'
   // Solo usuarios con rol 'usuario' (o el que definas) pueden crear.
   fastify.post('/api/v1/com', {
-    onRequest: [authenticate, authorize(['usuario'])], // Asegúrate que 'usuario' es un rol válido
+    onRequest: [authenticate, authorize(['usuario', 'colaborador', 'administrador'])],
     schema: {
       tags: ['com'],
       summary: 'Crear una nueva entrada de comunicación con archivos adjuntos (opcional)',

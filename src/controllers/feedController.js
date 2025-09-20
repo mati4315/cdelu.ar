@@ -175,7 +175,7 @@ async function getFeed(request, reply) {
     // Calcular páginas totales
     const totalPages = Math.ceil(total / limit);
 
-    reply.send({
+    return reply.send({
       data: formattedRows,
       pagination: {
         total,
@@ -279,7 +279,7 @@ async function getFeedItem(request, reply) {
       is_liked: Boolean(rows[0].is_liked)
     };
 
-    reply.send(formattedItem);
+    return reply.send(formattedItem);
 
   } catch (error) {
     console.error('Error al obtener el elemento del feed:', error);
@@ -336,7 +336,7 @@ async function getFeedStats(request, reply) {
       }
     });
 
-    reply.send(stats);
+    return reply.send(stats);
 
   } catch (error) {
     console.error('Error al obtener estadísticas del feed:', error);
@@ -392,7 +392,7 @@ async function syncFeed(request, reply) {
 
     await pool.execute(comQuery);
 
-    reply.send({
+    return reply.send({
       message: 'Feed sincronizado exitosamente'
     });
 

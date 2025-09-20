@@ -18,6 +18,19 @@ module.exports = {
     enabled: process.env.RSS_ENABLED !== 'false',
     intervalMinutes: parseInt(process.env.RSS_INTERVAL_MINUTES) || 360 // 6 horas por defecto
   },
+  facebook: {
+    pageId: process.env.FB_PAGE_ID || '',
+    pageToken: process.env.FB_PAGE_TOKEN || '',
+    graphVersion: process.env.FB_GRAPH_VERSION || 'v18.0',
+    cacheTtlSeconds: parseInt(process.env.FB_CACHE_TTL_SECONDS) || 30,
+    // Modo mock para desarrollo: permite simular un live sin credenciales de Facebook
+    mockEnabled: process.env.FB_MOCK_ENABLED === 'true',
+    mockPermalink: process.env.FB_MOCK_PERMALINK || '',
+    mockTitle: process.env.FB_MOCK_TITLE || 'Transmisión en vivo (simulada)',
+    mockStartedAt: process.env.FB_MOCK_STARTED_AT || new Date().toISOString(),
+    // Opcional: si tendrás un .m3u8 para modo "solo audio" o reproductor externo
+    mockHlsUrl: process.env.FB_MOCK_HLS_URL || ''
+  },
   // Orígenes permitidos para CORS (para helmet CSP y cors plugin)
   get corsOrigin() {
     const origin = process.env.CORS_ORIGIN;

@@ -10,7 +10,7 @@
 
 ### 🔧 Cambios en el Backend
 
-#### 1. Lógica Corregida en `surveyController.js`
+#### 1. Lógica Corregida en `surveys.controller.js`
 
 ```javascript
 // Verificar si el usuario ya votó (sistema de estado binario)
@@ -32,7 +32,7 @@ if (userId) {
 
 #### 2. Esquemas Fastify Actualizados
 
-En `survey.routes.js`:
+En `surveys.routes.js`:
 ```javascript
 // GET /api/v1/surveys/active - Incluye todos los campos necesarios
 options: {
@@ -133,8 +133,8 @@ fastify.post('/api/v1/surveys/:id/vote', {
 
 ## 🛠️ Archivos Modificados
 
-- ✅ `src/controllers/surveyController.js` - Lógica de autenticación
-- ✅ `src/routes/survey.routes.js` - Esquemas Fastify actualizados
+- ✅ `src/features/surveys/surveys.controller.js` - Lógica de autenticación
+- ✅ `src/features/surveys/surveys.routes.js` - Esquemas Fastify actualizados
 - ✅ Sistema de triggers en BD - Contadores automáticos
 
 ## 🧪 Testing

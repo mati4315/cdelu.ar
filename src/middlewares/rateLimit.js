@@ -176,10 +176,12 @@ function registerRateLimit(fastify) {
         timestamp: new Date().toISOString()
       });
 
+      const retrySeconds = Number(error.retryAfter || 900);
+      reply.header('Retry-After', retrySeconds.toString());
       return reply.status(429).send({
-        error: 'Rate Limit Excedido',
-        message: 'Has excedido el límite de requests. Intenta más tarde.',
-        retryAfter: error.retryAfter || 900, // 15 minutos por defecto
+        error: 'Demasiadas solicitudes',
+        message: 'Ha excedido el límite de solicitudes. Intente nuevamente más tarde.',
+        retryAfter: retrySeconds,
         code: 'RATE_LIMIT_EXCEEDED'
       });
     }

@@ -255,6 +255,9 @@ async function createComEntry(request, reply) {
       } else if (createdEntry) {
         createdEntry.image_urls = [];
       }
+      // Compat: exponer también image_url como la primera imagen si existe
+      createdEntry.image_url = Array.isArray(createdEntry.image_urls) && createdEntry.image_urls.length > 0 ? createdEntry.image_urls[0] : null;
+
       reply.status(201).send(createdEntry);
     } finally {
       connection.release();
@@ -291,6 +294,7 @@ async function getAllComEntries(request, reply) {
             entry.image_urls = [];
           }
         }
+        entry.image_url = Array.isArray(entry.image_urls) && entry.image_urls.length > 0 ? entry.image_urls[0] : null;
         return entry;
       });
       reply.send({ data: processedRows });
@@ -331,6 +335,7 @@ async function getComEntryById(request, reply) {
           entry.image_urls = [];
         }
       }
+      entry.image_url = Array.isArray(entry.image_urls) && entry.image_urls.length > 0 ? entry.image_urls[0] : null;
       reply.send(entry);
     } finally {
       connection.release();
