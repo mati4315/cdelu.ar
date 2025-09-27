@@ -1,6 +1,9 @@
 const pool = require('../config/database');
 const fs = require('node:fs');
 const path = require('node:path');
+const COM_UPLOAD_DIR = path.join(__dirname, '../../public/uploads/com_media');
+const ALLOWED_COM_IMAGE_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_COM_VIDEO_MIMES = ['video/mp4'];
 
 // Hacer Sharp opcional para evitar errores en hosting
 let sharp = null;
@@ -365,5 +368,318 @@ module.exports = {
   uploadProfilePicture,
   removeProfilePicture,
   getUserProfile,
-  getPublicUserProfile
+  getPublicUserProfile,
+  listMyPosts,
+  listUserPosts,
+  updateMyComPost,
+  deleteMyComPost,
+  updateMyComPostMedia
 }; 
+
+/**
+ * Listar posts de comunidad del usuario autenticado
+ */
+async function listMyPosts(request, reply) {
+  try {
+    const userId = request.user.id;
+    const { page = 1, limit = 10, order = 'desc' } = request.query || {};
+    const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const [[countRow]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM com WHERE user_id = ?',[userId]
+    );
+
+    const [rows] = await pool.query(
+      `SELECT id, titulo, descripcion, image_url, video_url, created_at, updated_at
+       FROM com
+       WHERE user_id = ?
+       ORDER BY created_at ${safeOrder}
+       LIMIT ? OFFSET ?`,
+      [userId, Number(limit), offset]
+    );
+
+    const data = rows.map(formatComRowImages);
+    const total = countRow.total || 0;
+    const totalPages = Math.ceil(total / Number(limit));
+
+    return reply.send({
+      data,
+      pagination: { total, page: Number(page), limit: Number(limit), totalPages }
+    });
+  } catch (error) {
+    request.log.error('Error al listar mis posts:', error);
+    return reply.status(500).send({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
+ * Listar posts de comunidad de un usuario público
+ */
+async function listUserPosts(request, reply) {
+  try {
+    const { userId } = request.params;
+    const { page = 1, limit = 10, order = 'desc' } = request.query || {};
+    const safeOrder = order === 'asc' ? 'ASC' : 'DESC';
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const [[countRow]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM com WHERE user_id = ?',[userId]
+    );
+
+    const [rows] = await pool.query(
+      `SELECT id, titulo, descripcion, image_url, video_url, created_at, updated_at
+       FROM com
+       WHERE user_id = ?
+       ORDER BY created_at ${safeOrder}
+       LIMIT ? OFFSET ?`,
+      [userId, Number(limit), offset]
+    );
+
+    const data = rows.map(formatComRowImages);
+    const total = countRow.total || 0;
+    const totalPages = Math.ceil(total / Number(limit));
+
+    return reply.send({
+      data,
+      pagination: { total, page: Number(page), limit: Number(limit), totalPages }
+    });
+  } catch (error) {
+    request.log.error('Error al listar posts de usuario:', error);
+    return reply.status(500).send({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
+ * Actualizar un post de comunidad propio
+ */
+async function updateMyComPost(request, reply) {
+  try {
+    const userId = request.user.id;
+    const { postId } = request.params;
+    const { titulo, descripcion } = request.body || {};
+
+    if (!titulo && !descripcion) {
+      return reply.status(400).send({ error: 'No se proporcionaron datos para actualizar' });
+    }
+
+    const [[existing]] = await pool.query(
+      'SELECT id, user_id FROM com WHERE id = ?', [postId]
+    );
+    if (!existing) {
+      return reply.status(404).send({ error: 'Entrada no encontrada' });
+    }
+    if (existing.user_id !== userId) {
+      return reply.status(403).send({ error: 'No tienes permiso para actualizar esta entrada' });
+    }
+
+    const updates = [];
+    const values = [];
+    if (titulo) { updates.push('titulo = ?'); values.push(titulo); }
+    if (descripcion) { updates.push('descripcion = ?'); values.push(descripcion); }
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(postId);
+
+    await pool.query(
+      `UPDATE com SET ${updates.join(', ')} WHERE id = ?`, values
+    );
+
+    const [[row]] = await pool.query(
+      'SELECT id, titulo, descripcion, image_url, video_url, created_at, updated_at FROM com WHERE id = ?',
+      [postId]
+    );
+
+    return reply.send(formatComRowImages(row));
+  } catch (error) {
+    request.log.error('Error al actualizar post de comunidad:', error);
+    return reply.status(500).send({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
+ * Eliminar un post de comunidad propio (y archivos asociados si existen)
+ */
+async function deleteMyComPost(request, reply) {
+  try {
+    const userId = request.user.id;
+    const { postId } = request.params;
+
+    const [[existing]] = await pool.query(
+      'SELECT id, user_id, video_url, image_url FROM com WHERE id = ?', [postId]
+    );
+    if (!existing) {
+      return reply.status(404).send({ error: 'Entrada no encontrada' });
+    }
+    if (existing.user_id !== userId) {
+      return reply.status(403).send({ error: 'No tienes permiso para eliminar esta entrada' });
+    }
+
+    await pool.query('DELETE FROM com WHERE id = ?', [postId]);
+
+    // Eliminar archivos si existen (best-effort)
+    try {
+      if (existing.video_url) {
+        const videoPath = path.join(COM_UPLOAD_DIR, path.basename(existing.video_url));
+        if (fs.existsSync(videoPath)) { await fs.promises.unlink(videoPath); }
+      }
+      if (existing.image_url) {
+        // image_url puede ser JSON con múltiples rutas
+        let images = [];
+        try {
+          images = JSON.parse(existing.image_url);
+        } catch (_) {
+          images = [existing.image_url];
+        }
+        for (const img of images) {
+          const imgPath = path.join(COM_UPLOAD_DIR, path.basename(img));
+          if (fs.existsSync(imgPath)) { await fs.promises.unlink(imgPath); }
+        }
+      }
+    } catch (cleanupErr) {
+      request.log.warn({ msg: 'No se pudo eliminar uno o más archivos asociados', error: cleanupErr?.message });
+    }
+
+    return reply.send({ message: 'Entrada eliminada correctamente' });
+  } catch (error) {
+    request.log.error('Error al eliminar post de comunidad:', error);
+    return reply.status(500).send({ error: 'Error interno del servidor' });
+  }
+}
+
+function formatComRowImages(row) {
+  if (!row) return row;
+  let imageUrls = [];
+  if (row.image_url && typeof row.image_url === 'string') {
+    try {
+      const parsed = JSON.parse(row.image_url);
+      if (Array.isArray(parsed)) imageUrls = parsed;
+    } catch (_) {
+      imageUrls = [row.image_url];
+    }
+  }
+  return {
+    ...row,
+    image_urls: imageUrls,
+    image_url: imageUrls.length > 0 ? imageUrls[0] : null
+  };
+}
+
+/**
+ * Actualiza media (imágenes/video) de un post de comunidad propio.
+ * Acepta multipart: image (1 o varias) y/o video. Permite removals por flags.
+ */
+async function updateMyComPostMedia(request, reply) {
+  try {
+    const userId = request.user.id;
+    const { postId } = request.params;
+    const body = request.body || {};
+
+    const [[existing]] = await pool.query(
+      'SELECT id, user_id, video_url, image_url FROM com WHERE id = ?', [postId]
+    );
+    if (!existing) return reply.status(404).send({ error: 'Entrada no encontrada' });
+    if (existing.user_id !== userId) return reply.status(403).send({ error: 'No tienes permiso para actualizar esta entrada' });
+
+    // Cargar helpers de com.controller sin duplicar lógica pesada
+    // Reutilizamos estrategia local simple: guardar archivos en COM_UPLOAD_DIR
+    // Nota: validaciones de tamaño ya existen en com.controller; aquí aplicamos límites conservadores
+    const MAX_VIDEO_SIZE_BYTES = 200 * 1024 * 1024;
+    const MAX_IMAGE_SIZE_BYTES_PER_FILE = 10 * 1024 * 1024;
+
+    let currentImages = [];
+    try {
+      currentImages = existing.image_url ? JSON.parse(existing.image_url) : [];
+      if (!Array.isArray(currentImages)) currentImages = [existing.image_url].filter(Boolean);
+    } catch (_) {
+      currentImages = [existing.image_url].filter(Boolean);
+    }
+
+    // Eliminaciones opcionales
+    const removeVideo = body.remove_video && (body.remove_video.value === 'true' || body.remove_video === true);
+    const removeImagesCsv = body.remove_images && (body.remove_images.value || '').toString();
+    const removeImages = removeImagesCsv
+      ? removeImagesCsv.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+
+    // Agregados nuevos
+    const newImages = [];
+    if (body.image) {
+      const imageFiles = Array.isArray(body.image) ? body.image : [body.image];
+      for (const imageFile of imageFiles) {
+      // Validar MIME
+      const mimetype = imageFile?.mimetype || imageFile?.type;
+      if (!ALLOWED_COM_IMAGE_MIMES.includes(String(mimetype || '').toLowerCase())) {
+        return reply.status(400).send({ error: 'Tipo de imagen no permitido (jpg, png, webp)' });
+      }
+        const buf = await readMultipartToBuffer(imageFile);
+        if (buf.length > MAX_IMAGE_SIZE_BYTES_PER_FILE) {
+          return reply.status(400).send({ error: 'Imagen excede tamaño máximo (10MB)' });
+        }
+        const unique = `image-${Date.now()}-${Math.round(Math.random()*1e9)}.jpg`;
+        const outPath = path.join(COM_UPLOAD_DIR, unique);
+        await fs.promises.writeFile(outPath, buf);
+        newImages.push(`/public/uploads/com_media/${unique}`);
+      }
+    }
+
+    let newVideoUrl = existing.video_url;
+    if (removeVideo) {
+      if (existing.video_url) {
+        const vpath = path.join(COM_UPLOAD_DIR, path.basename(existing.video_url));
+        if (fs.existsSync(vpath)) { await fs.promises.unlink(vpath); }
+      }
+      newVideoUrl = null;
+    }
+    if (body.video) {
+    // Validar MIME
+    const mimetype = body.video?.mimetype || body.video?.type;
+    if (!ALLOWED_COM_VIDEO_MIMES.includes(String(mimetype || '').toLowerCase())) {
+      return reply.status(400).send({ error: 'Tipo de video no permitido (mp4)' });
+    }
+      const vbuf = await readMultipartToBuffer(body.video);
+      if (vbuf.length > MAX_VIDEO_SIZE_BYTES) {
+        return reply.status(400).send({ error: 'Video excede tamaño máximo (200MB)' });
+      }
+      const vname = `video-${Date.now()}-${Math.round(Math.random()*1e9)}.mp4`;
+      const vout = path.join(COM_UPLOAD_DIR, vname);
+      await fs.promises.writeFile(vout, vbuf);
+      // Si había video anterior y no fue marcado para mantener, eliminarlo
+      if (existing.video_url && existing.video_url !== `/public/uploads/com_media/${vname}`) {
+        const old = path.join(COM_UPLOAD_DIR, path.basename(existing.video_url));
+        if (fs.existsSync(old)) { await fs.promises.unlink(old); }
+      }
+      newVideoUrl = `/public/uploads/com_media/${vname}`;
+    }
+
+    // Construir set de imágenes final: quitar removidas, añadir nuevas
+    const remaining = currentImages.filter(img => !removeImages.includes(path.basename(img)) && !removeImages.includes(img));
+    const finalImages = [...remaining, ...newImages];
+
+    await pool.query(
+      'UPDATE com SET image_url = ?, video_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [finalImages.length ? JSON.stringify(finalImages) : null, newVideoUrl, postId]
+    );
+
+    const [[row]] = await pool.query(
+      'SELECT id, titulo, descripcion, image_url, video_url, created_at, updated_at FROM com WHERE id = ?',
+      [postId]
+    );
+
+    return reply.send(formatComRowImages(row));
+  } catch (error) {
+    request.log.error('Error al actualizar media del post:', error);
+    return reply.status(500).send({ error: 'Error interno del servidor' });
+  }
+}
+
+async function readMultipartToBuffer(filePart) {
+  if (!filePart) return Buffer.alloc(0);
+  if (filePart.value && Buffer.isBuffer(filePart.value)) return filePart.value;
+  if (filePart._buf && Buffer.isBuffer(filePart._buf)) return filePart._buf;
+  if (filePart.file) {
+    const chunks = [];
+    for await (const chunk of filePart.file) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  }
+  return Buffer.alloc(0);
+}

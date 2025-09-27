@@ -170,6 +170,19 @@ async function createComment(userId, newsId, content) {
   return result.insertId;
 }
 
+/**
+ * Obtiene el contador de comentarios desde content_feed.
+ * @param {number} newsId
+ * @returns {Promise<number>}
+ */
+async function getCommentsCountFromFeed(newsId) {
+  const [rows] = await pool.query(
+    'SELECT comments_count FROM content_feed WHERE type = 1 AND original_id = ?',
+    [newsId]
+  );
+  return rows[0] ? rows[0].comments_count : 0;
+}
+
 module.exports = {
   fetchNewsList,
   fetchNewsTotalCount,
@@ -182,6 +195,7 @@ module.exports = {
   deleteLike,
   fetchComments,
   createComment,
+  getCommentsCountFromFeed,
 };
 
 

@@ -402,6 +402,7 @@ async function newsRoutes(fastify, options) {
           type: 'object',
           properties: {
             id: { type: 'integer' },
+            comments_count: { type: 'integer', description: 'Contador actualizado de comentarios' },
             message: { type: 'string' }
           }
         }
@@ -418,8 +419,15 @@ async function newsRoutes(fastify, options) {
         [userId, id, content]
       );
 
+      // Obtener el contador actualizado de comentarios
+      const [commentsCount] = await pool.query(
+        'SELECT comments_count FROM content_feed WHERE type = 1 AND original_id = ?',
+        [id]
+      );
+
       reply.status(201).send({
         id: result.insertId,
+        comments_count: commentsCount[0] ? commentsCount[0].comments_count : 0,
         message: 'Comentario creado correctamente'
       });
     } catch (error) {

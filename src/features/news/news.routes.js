@@ -181,6 +181,17 @@ async function newsRoutes(fastify) {
         required: ['content'],
         properties: { content: { type: 'string', minLength: 1, maxLength: 1000 } },
       },
+      response: {
+        201: {
+          description: 'Comentario creado correctamente',
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            comments_count: { type: 'integer', description: 'Contador actualizado de comentarios' },
+            message: { type: 'string' }
+          }
+        }
+      }
     },
   }, ctrl.createComment);
 

@@ -35,6 +35,7 @@ const schemas = {
       original_id: { type: 'integer' },
       user_id: { type: 'integer', nullable: true },
       user_name: { type: 'string', nullable: true },
+      user_profile_picture: { type: 'string', nullable: true },
       published_at: { type: 'string', format: 'date-time', nullable: true },
       created_at: { type: 'string', format: 'date-time' },
       updated_at: { type: 'string', format: 'date-time' },
@@ -65,6 +66,7 @@ const schemas = {
             original_id: { type: 'integer' },
             user_id: { type: 'integer', nullable: true },
             user_name: { type: 'string', nullable: true },
+            user_profile_picture: { type: 'string', nullable: true },
             published_at: { type: 'string', format: 'date-time', nullable: true },
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
@@ -768,6 +770,7 @@ async function feedRoutes(fastify, options) {
           type: 'object',
           properties: {
             id: { type: 'integer' },
+            comments_count: { type: 'integer', description: 'Contador actualizado de comentarios' },
             message: { type: 'string' }
           }
         },
@@ -827,8 +830,15 @@ async function feedRoutes(fastify, options) {
         );
       }
 
+      // Obtener el contador actualizado de comentarios
+      const [feedUpdate] = await pool.query(
+        'SELECT comments_count FROM content_feed WHERE id = ?',
+        [feedId]
+      );
+
       return reply.status(201).send({
         id: result.insertId,
+        comments_count: feedUpdate[0] ? feedUpdate[0].comments_count : 0,
         message: 'Comentario creado correctamente'
       });
 
@@ -1160,6 +1170,7 @@ async function feedRoutes(fastify, options) {
             cf.original_id,
             cf.user_id,
             cf.user_name,
+            cf.user_profile_picture,
             cf.published_at,
             cf.created_at,
             cf.updated_at,
@@ -1190,6 +1201,7 @@ async function feedRoutes(fastify, options) {
             cf.original_id,
             cf.user_id,
             cf.user_name,
+            cf.user_profile_picture,
             cf.published_at,
             cf.created_at,
             cf.updated_at,

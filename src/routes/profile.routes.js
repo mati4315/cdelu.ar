@@ -157,6 +157,174 @@ async function profileRoutes(fastify, options) {
     schema: getPublicUserProfileSchema
   }, userController.getPublicUserProfile);
 
+  // === NUEVOS ENDPOINTS: Posts del perfil ===
+
+  // Schema común para lista de posts (comunidad)
+  const listUserPostsSchema = {
+    description: 'Listar posts de comunidad (com) creados por un usuario',
+    tags: ['Profile'],
+    querystring: {
+      type: 'object',
+      properties: {
+        page: { type: 'integer', minimum: 1, default: 1 },
+        limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+        order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' }
+      }
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                titulo: { type: 'string' },
+                descripcion: { type: 'string' },
+                image_url: { type: 'string', nullable: true },
+                image_urls: { type: 'array', items: { type: 'string' } },
+                video_url: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+                updated_at: { type: 'string', format: 'date-time' }
+              }
+            }
+          },
+          pagination: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer' },
+              page: { type: 'integer' },
+              limit: { type: 'integer' },
+              totalPages: { type: 'integer' }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // GET /api/v1/profile/me/posts - Listar mis posts de comunidad
+  fastify.get('/me/posts', {
+    schema: listUserPostsSchema,
+    preHandler: requireAuthentication
+  }, userController.listMyPosts);
+
+  // GET /api/v1/profile/:userId/posts - Listar posts de comunidad de un usuario
+  fastify.get('/:userId/posts', {
+    schema: {
+      ...listUserPostsSchema,
+      params: {
+        type: 'object',
+        properties: { userId: { type: 'integer' } },
+        required: ['userId']
+      }
+    }
+  }, userController.listUserPosts);
+
+  // PUT /api/v1/profile/me/posts/:postId - Actualizar mi post de comunidad
+  fastify.put('/me/posts/:postId', {
+    preHandler: requireAuthentication,
+    schema: {
+      description: 'Actualizar un post de comunidad propio',
+      tags: ['Profile'],
+      params: {
+        type: 'object',
+        properties: { postId: { type: 'integer', minimum: 1 } },
+        required: ['postId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          titulo: { type: 'string', minLength: 1, maxLength: 255 },
+          descripcion: { type: 'string', minLength: 1 }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            titulo: { type: 'string' },
+            descripcion: { type: 'string' },
+            image_url: { type: 'string', nullable: true },
+            image_urls: { type: 'array', items: { type: 'string' } },
+            video_url: { type: 'string', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, userController.updateMyComPost);
+
+  // DELETE /api/v1/profile/me/posts/:postId - Eliminar mi post de comunidad
+  fastify.delete('/me/posts/:postId', {
+    preHandler: requireAuthentication,
+    schema: {
+      description: 'Eliminar un post de comunidad propio',
+      tags: ['Profile'],
+      params: {
+        type: 'object',
+        properties: { postId: { type: 'integer', minimum: 1 } },
+        required: ['postId']
+      },
+      response: {
+        200: { type: 'object', properties: { message: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, userController.deleteMyComPost);
+
+  // PUT /api/v1/profile/me/posts/:postId/media - Editar imágenes/video de mi post (multipart)
+  fastify.put('/me/posts/:postId/media', {
+    preHandler: requireAuthentication,
+    schema: {
+      description: 'Actualizar media (imágenes y/o video) de un post propio',
+      tags: ['Profile'],
+      consumes: ['multipart/form-data'],
+      params: {
+        type: 'object',
+        properties: { postId: { type: 'integer', minimum: 1 } },
+        required: ['postId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          // Archivos opcionales
+          video: { type: 'object' },
+          image: {
+            oneOf: [ { type: 'object' }, { type: 'array', items: { type: 'object' } } ]
+          },
+          // Campos para eliminar
+          remove_video: { type: 'object' },
+          remove_images: { type: 'object' } // puede ser CSV en .value
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            titulo: { type: 'string' },
+            descripcion: { type: 'string' },
+            image_url: { type: 'string', nullable: true },
+            image_urls: { type: 'array', items: { type: 'string' } },
+            video_url: { type: 'string', nullable: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, userController.updateMyComPostMedia);
 }
 
 module.exports = profileRoutes; 

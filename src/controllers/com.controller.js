@@ -37,6 +37,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 const MAX_VIDEO_SIZE_BYTES = 200 * 1024 * 1024; // 200MB
 const MAX_IMAGES_COUNT = 6;
 const MAX_IMAGE_SIZE_BYTES_PER_FILE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_COM_IMAGE_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_COM_VIDEO_MIMES = ['video/mp4'];
 
 /**
  * Guarda un archivo subido (procesando imágenes y videos sincrónicamente) y retorna su ruta relativa.
@@ -207,6 +209,11 @@ async function createComEntry(request, reply) {
         return reply.status(400).send({ error: `No puede subir más de ${MAX_IMAGES_COUNT} imágenes.` });
       }
       for (const imageFile of imageFiles) {
+        // Validar MIME de imagen
+        const mimetype = imageFile?.mimetype || imageFile?.type;
+        if (!ALLOWED_COM_IMAGE_MIMES.includes(String(mimetype || '').toLowerCase())) {
+          return reply.status(400).send({ error: 'Tipo de imagen no permitido (jpg, png, webp)' });
+        }
         const singleImageResult = await saveFile(imageFile, UPLOAD_DIR, MAX_IMAGE_SIZE_BYTES_PER_FILE);
         if (singleImageResult && typeof singleImageResult === 'string') {
           imageUrls.push(singleImageResult);
@@ -218,6 +225,11 @@ async function createComEntry(request, reply) {
 
     // Procesar y guardar video (sincrónicamente ahora)
     if (videoFile) {
+      // Validar MIME de video
+      const mimetype = videoFile?.mimetype || videoFile?.type;
+      if (!ALLOWED_COM_VIDEO_MIMES.includes(String(mimetype || '').toLowerCase())) {
+        return reply.status(400).send({ error: 'Tipo de video no permitido (mp4)' });
+      }
       // La validación de tamaño ahora está dentro de saveFile antes de procesar.
       videoUrl = await saveFile(videoFile, UPLOAD_DIR, MAX_VIDEO_SIZE_BYTES);
       if (!videoUrl) {

@@ -125,6 +125,11 @@ async function createComment(newsId, userId, content) {
   return insertId;
 }
 
+async function getCommentsCount(newsId) {
+  const count = await repo.getCommentsCountFromFeed(newsId);
+  return count;
+}
+
 module.exports = {
   listNews,
   getNewsById,
@@ -135,6 +140,7 @@ module.exports = {
   removeLike,
   listComments,
   createComment,
+  getCommentsCount,
 };
 
 

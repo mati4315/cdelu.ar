@@ -83,8 +83,17 @@ async function unlikeNews(request, reply) {
 
 async function createComment(request, reply) {
   try {
-    const insertId = await service.createComment(Number(request.params.id), request.user.id, request.body.content);
-    return reply.status(201).send({ id: insertId, message: 'Comentario creado correctamente' });
+    const newsId = Number(request.params.id);
+    const insertId = await service.createComment(newsId, request.user.id, request.body.content);
+    
+    // Obtener el contador actualizado de comentarios desde content_feed
+    const commentsCount = await service.getCommentsCount(newsId);
+    
+    return reply.status(201).send({ 
+      id: insertId, 
+      comments_count: commentsCount,
+      message: 'Comentario creado correctamente' 
+    });
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({ error: 'Error al crear el comentario' });

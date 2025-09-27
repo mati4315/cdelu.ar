@@ -13,6 +13,7 @@ const featureAdsRoutes = require('./features/ads/ads.routes');
 const lotteryRoutes = require('./routes/lottery.routes.js');
 const featureSurveysRoutes = require('./features/surveys/surveys.routes');
 const featureFacebookRoutes = require('./features/facebook/facebook.routes');
+const featureUsersRoutes = require('./features/users/users.routes');
 const adminRoutes = require('./routes/admin.routes.js');
 const profileRoutes = require('./routes/profile.routes.js');
 const { authenticate, authorize } = require('./middlewares/auth');
@@ -294,6 +295,8 @@ fastify.register(mobileRoutes);
 fastify.register(featureAdsRoutes);
 // Facebook Live
 fastify.register(featureFacebookRoutes);
+// Rutas Users feature-based (perfiles públicos y seguimiento)
+fastify.register(featureUsersRoutes);
 fastify.register(lotteryRoutes);
 // Reemplaza rutas legacy de encuestas por feature-based
 fastify.register(featureSurveysRoutes);

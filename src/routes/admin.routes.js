@@ -486,6 +486,123 @@ async function adminRoutes(fastify, options) {
       });
     }
   });
+
+  // === Video Settings (habilitar/deshabilitar video global) ===
+  async function ensureAdminSettingsTable(pool) {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_settings (
+        ` + '`key`' + ` VARCHAR(100) PRIMARY KEY,
+        ` + '`value`' + ` TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  }
+
+  // GET /api/v1/admin/video-settings
+  fastify.get('/api/v1/admin/video-settings', {
+    preHandler: requireAdmin,
+    schema: {
+      tags: ['Administración'],
+      summary: 'Obtener configuración global de video',
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            isVideoEnabled: { type: 'boolean' },
+            lastModified: { type: 'string' },
+            modifiedBy: { type: 'string' }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const pool = require('../config/database');
+      await ensureAdminSettingsTable(pool);
+      const settingsKey = 'video_settings';
+      const [rows] = await pool.query('SELECT `value`, updated_at FROM admin_settings WHERE `key` = ?', [settingsKey]);
+
+      if (!rows || rows.length === 0) {
+        const defaultObj = {
+          isVideoEnabled: true,
+          lastModified: new Date().toISOString(),
+          modifiedBy: 'system'
+        };
+        await pool.query(
+          'INSERT INTO admin_settings (`key`, `value`, updated_at) VALUES (?, ?, NOW())',
+          [settingsKey, JSON.stringify(defaultObj)]
+        );
+        return reply.send(defaultObj);
+      }
+
+      let parsed;
+      try { parsed = JSON.parse(rows[0].value); } catch (_) { parsed = {}; }
+      // Backfill por si faltan campos
+      parsed.isVideoEnabled = typeof parsed.isVideoEnabled === 'boolean' ? parsed.isVideoEnabled : true;
+      parsed.modifiedBy = parsed.modifiedBy || 'system';
+      parsed.lastModified = parsed.lastModified || (rows[0].updated_at ? new Date(rows[0].updated_at).toISOString() : new Date().toISOString());
+
+      return reply.send(parsed);
+    } catch (error) {
+      console.error('Error obtaining video settings:', error);
+      return reply.code(500).send({ error: 'Error interno del servidor' });
+    }
+  });
+
+  // PUT /api/v1/admin/video-settings
+  fastify.put('/api/v1/admin/video-settings', {
+    preHandler: requireAdmin,
+    schema: {
+      tags: ['Administración'],
+      summary: 'Actualizar configuración global de video',
+      body: {
+        type: 'object',
+        required: ['isVideoEnabled', 'modifiedBy'],
+        properties: {
+          isVideoEnabled: { type: 'boolean' },
+          modifiedBy: { type: 'string', minLength: 1, maxLength: 100 }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            settings: {
+              type: 'object',
+              properties: {
+                isVideoEnabled: { type: 'boolean' },
+                lastModified: { type: 'string' },
+                modifiedBy: { type: 'string' }
+              }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const pool = require('../config/database');
+      await ensureAdminSettingsTable(pool);
+      const settingsKey = 'video_settings';
+      const { isVideoEnabled, modifiedBy } = request.body;
+      const obj = {
+        isVideoEnabled: Boolean(isVideoEnabled),
+        modifiedBy: String(modifiedBy),
+        lastModified: new Date().toISOString()
+      };
+
+      await pool.query(
+        'INSERT INTO admin_settings (`key`, `value`, updated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`), updated_at=VALUES(updated_at)',
+        [settingsKey, JSON.stringify(obj)]
+      );
+
+      return reply.send({ success: true, settings: obj });
+    } catch (error) {
+      console.error('Error updating video settings:', error);
+      return reply.code(500).send({ success: false, error: 'Error interno del servidor' });
+    }
+  });
 }
 
 module.exports = adminRoutes; 
