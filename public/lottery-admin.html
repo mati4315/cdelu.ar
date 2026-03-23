@@ -2610,12 +2610,17 @@ Los tickets que fueron reembolsados NO se restaurarán automáticamente.`;
         }
 
         function formatDate(dateString) {
-            return new Date(dateString).toLocaleString('es-ES');
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Fecha inválida';
+            return date.toLocaleString('es-ES');
         }
 
         function formatDateTimeLocal(date) {
             const d = new Date(date);
-            return d.toISOString().slice(0, 16);
+            if (isNaN(d.getTime())) return '';
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().slice(0, 16);
         }
 
         function showAlert(message, type) {

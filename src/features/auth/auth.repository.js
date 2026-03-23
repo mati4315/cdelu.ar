@@ -4,8 +4,10 @@ const pool = require('../../config/database');
 
 async function findUserByEmail(email) {
   const [rows] = await pool.query(
-    `SELECT id, nombre, email, password, rol, profile_picture_url, created_at
-     FROM users WHERE email = ?`,
+    `SELECT u.id, u.nombre, u.email, u.password, r.nombre as rol, u.profile_picture_url, u.created_at
+     FROM users u
+     JOIN roles r ON u.role_id = r.id
+     WHERE u.email = ?`,
     [email]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -13,8 +15,10 @@ async function findUserByEmail(email) {
 
 async function findUserById(id) {
   const [rows] = await pool.query(
-    `SELECT id, nombre, email, rol, profile_picture_url, created_at
-     FROM users WHERE id = ?`,
+    `SELECT u.id, u.nombre, u.email, r.nombre as rol, u.profile_picture_url, u.created_at
+     FROM users u
+     JOIN roles r ON u.role_id = r.id
+     WHERE u.id = ?`,
     [id]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -26,10 +30,18 @@ async function emailExists(email) {
 }
 
 async function insertUser({ nombre, email, passwordHash, rol }) {
+  // Mapear nombre de rol a id
+  const roleMap = {
+    'administrador': 1,
+    'colaborador': 2,
+    'usuario': 3
+  };
+  const roleId = roleMap[rol] || 3;
+
   const [result] = await pool.query(
-    `INSERT INTO users (nombre, email, password, rol)
+    `INSERT INTO users (nombre, email, password, role_id)
      VALUES (?, ?, ?, ?)`,
-    [nombre, email, passwordHash, rol]
+    [nombre, email, passwordHash, roleId]
   );
   return result.insertId;
 }

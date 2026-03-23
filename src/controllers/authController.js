@@ -10,6 +10,14 @@ async function register(request, reply) {
   try {
     const { nombre, email, password, rol = 'usuario' } = request.body;
 
+    // Mapear nombre de rol a id
+    const roleMap = {
+      'administrador': 1,
+      'colaborador': 2,
+      'usuario': 3
+    };
+    const roleId = roleMap[rol] || 3;
+
     // Verificar si el usuario ya existe
     const [existingUser] = await pool.query(
       'SELECT id FROM users WHERE email = ?',
@@ -25,9 +33,9 @@ async function register(request, reply) {
 
     // Insertar el nuevo usuario
     const [result] = await pool.query(
-      `INSERT INTO users (nombre, email, password, rol) 
+      `INSERT INTO users (nombre, email, password, role_id) 
        VALUES (?, ?, ?, ?)`,
-      [nombre, email, hashedPassword, rol]
+      [nombre, email, hashedPassword, roleId]
     );
 
     // Generar token JWT
@@ -64,11 +72,12 @@ async function login(request, reply) {
 
     console.log('🔐 Intento de login:', { email, password: password ? '***' : 'undefined' });
 
-    // Buscar usuario por email
+    // Buscar usuario por email con su rol
     const [users] = await pool.query(
-      `SELECT id, nombre, email, password, rol, profile_picture_url, created_at
-       FROM users 
-       WHERE email = ?`,
+      `SELECT u.id, u.nombre, u.email, u.password, r.nombre as rol, u.profile_picture_url, u.created_at
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.email = ?`,
       [email]
     );
 
@@ -136,9 +145,10 @@ async function getProfile(request, reply) {
     const userId = request.user.id;
 
     const [users] = await pool.query(
-      `SELECT id, nombre, email, rol, created_at 
-       FROM users 
-       WHERE id = ?`,
+      `SELECT u.id, u.nombre, u.email, r.nombre as rol, u.created_at 
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.id = ?`,
       [userId]
     );
 

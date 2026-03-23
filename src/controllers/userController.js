@@ -246,10 +246,11 @@ async function getUserProfile(request, reply) {
 
     // Obtener datos básicos del usuario
     const [users] = await pool.query(
-      `SELECT id, nombre, email, profile_picture_url, rol, 
-              created_at, updated_at
-       FROM users 
-       WHERE id = ?`,
+      `SELECT u.id, u.nombre, u.email, u.profile_picture_url, r.nombre as rol, 
+              u.created_at, u.updated_at
+       FROM users u
+       LEFT JOIN roles r ON u.role_id = r.id
+       WHERE u.id = ?`,
       [userId]
     );
 
@@ -274,25 +275,25 @@ async function getUserProfile(request, reply) {
          FROM comments
          WHERE user_id = ?`,
         [userId]
-      ),
+      ).catch(() => [[{ comments_count: 0 }]]),
       pool.query(
         `SELECT COUNT(DISTINCT lottery_id) AS lottery_participations
          FROM lottery_tickets
          WHERE user_id = ? AND payment_status = 'paid'`,
         [userId]
-      ),
+      ).catch(() => [[{ lottery_participations: 0 }]]),
       pool.query(
         `SELECT COUNT(*) AS lottery_wins
          FROM lottery_winners
          WHERE user_id = ?`,
         [userId]
-      ),
+      ).catch(() => [[{ lottery_wins: 0 }]]),
       pool.query(
         `SELECT COUNT(*) AS community_posts_count
          FROM com
          WHERE user_id = ?`,
         [userId]
-      )
+      ).catch(() => [[{ community_posts_count: 0 }]])
     ]);
 
     const commentsCount = commentsCountRows?.[0]?.comments_count ?? 0;
@@ -336,9 +337,10 @@ async function getPublicUserProfile(request, reply) {
     const { userId } = request.params;
 
     const [users] = await pool.query(
-      `SELECT id, nombre, profile_picture_url, rol, created_at
-       FROM users 
-       WHERE id = ?`,
+      `SELECT u.id, u.nombre, u.profile_picture_url, r.nombre as rol, u.created_at
+       FROM users u
+       LEFT JOIN roles r ON u.role_id = r.id
+       WHERE u.id = ?`,
       [userId]
     );
 

@@ -37,7 +37,7 @@ async function setupLotteryDatabase() {
     const statements = sqlContent
       .split(';')
       .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+      .filter(stmt => stmt.length > 0);
     
     // Ejecutar cada declaración por separado
     for (let i = 0; i < statements.length; i++) {

@@ -86,7 +86,7 @@
 
         // Cargar configuración
         document.addEventListener('DOMContentLoaded', function() {
-            if (localStorage.getItem('token')) {
+            if (localStorage.getItem('authToken')) {
                 window.location.href = '/public/dashboard.html';
             }
         });
@@ -142,7 +142,7 @@
                 }
 
                 // Guardar token y redirigir
-                localStorage.setItem('token', data.token);
+                localStorage.setItem('authToken', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
                 window.location.href = '/public/dashboard.html';
             } catch (error) {

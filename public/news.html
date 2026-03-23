@@ -657,7 +657,9 @@
         }
         
         function formatDate(dateString) {
+            if (!dateString) return 'N/A';
             const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Fecha inválida';
             return date.toLocaleDateString('es-ES', {
                 year: 'numeric',
                 month: 'short',

@@ -1657,6 +1657,51 @@
                     </form>
                 </div>
                 
+                <!-- News Modal -->
+                <div class="login-modal" id="newsModal" style="display: none;">
+                    <form class="login-form" id="newsForm" style="max-width: 600px;">
+                        <div class="login-header">
+                            <h2 id="newsModalTitle">Nueva Noticia</h2>
+                            <p>Crea o edita noticias para el portal</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Título</label>
+                            <input type="text" class="form-control" id="newsTitle" required placeholder="Título de la noticia">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" id="newsDescription" rows="4" required placeholder="Contenido de la noticia"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">URL de Imagen</label>
+                            <input type="url" class="form-control" id="newsImageUrl" placeholder="https://ejemplo.com/imagen.jpg">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">URL Original (Opcional)</label>
+                            <input type="url" class="form-control" id="newsOriginalUrl" placeholder="https://fuente.com/noticia">
+                        </div>
+                        
+                        <div class="form-group d-flex align-items-center gap-2">
+                            <input type="checkbox" id="newsIsOficial">
+                            <label class="form-label mb-0" for="newsIsOficial">Noticia Oficial</label>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <span class="news-text">Guardar Noticia</span>
+                                <span class="loading-spinner d-none"></span>
+                            </button>
+                            <button type="button" class="btn btn-outline" id="cancelNewsBtn">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
                 <!-- Notification -->
                 <div class="notification" id="notification">
                     <div class="notification-content"></div>
@@ -2445,7 +2490,9 @@
         }
         
         function formatDate(dateString) {
+            if (!dateString) return 'N/A';
             const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Fecha inválida';
             return date.toLocaleDateString('es-ES', {
                 year: 'numeric',
                 month: 'short',

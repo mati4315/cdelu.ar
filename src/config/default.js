@@ -14,7 +14,7 @@ module.exports = {
     apiKey: process.env.DEEPSEEK_API_KEY || ''
   },
   rss: {
-    feedUrl: process.env.RSS_FEED_URL || 'https://lapiramide.net/feed',
+    feedUrl: process.env.RSS_FEED_URL || 'https://lacalle.com.ar/feed/',
     enabled: process.env.RSS_ENABLED !== 'false',
     intervalMinutes: parseInt(process.env.RSS_INTERVAL_MINUTES) || 360 // 6 horas por defecto
   },

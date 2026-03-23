@@ -808,7 +808,10 @@
         }
 
         function formatDate(dateString) {
-            return new Date(dateString).toLocaleString('es-ES');
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Fecha inválida';
+            return date.toLocaleString('es-ES');
         }
 
         function showAlert(message, type) {

@@ -15,7 +15,8 @@ const config = {
   keepAliveInitialDelay: 10000, // 10 segundos
   connectTimeout: 10000, // 10 segundos
   // Manejo de desconexiones
-  dateStrings: true, // Manejar fechas como strings
+  timezone: 'Z', // Forzar zona horaria UTC para consistencia
+  // dateStrings: true, // Removido para permitir que mysql2 maneje objetos Date y Fastify genere ISO strings
   // Opciones de seguridad
   supportBigNumbers: true,
   bigNumberStrings: true,
@@ -25,6 +26,12 @@ const config = {
 
 // Crear el pool de conexiones
 const pool = mysql.createPool(config);
+
+// Interceptar nuevas conexiones para establecer la zona horaria en UTC
+// Esto garantiza que NOW() y CURRENT_TIMESTAMP usen UTC independientemente del servidor
+pool.on('connection', (connection) => {
+  connection.query("SET time_zone = '+00:00'");
+});
 
 // Verificar la conexión de base de datos
 async function testConnection() {

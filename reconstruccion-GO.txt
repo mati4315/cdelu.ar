@@ -1,0 +1,231 @@
+# Guía Práctica: Reconstrucción Paso a Paso del Proyecto a Go (Golang)
+
+Esta guía es un "manos a la obra" para tu equipo de desarrollo. Aquí detallamos los comandos exactos y la estructura de código inicial para empezar a reconstruir el backend `cdelu` desde cero en Go, utilizando el framework **Fiber** (por su similitud y enorme superioridad en performance sobre Fastify) y **sqlx** (para interactuar fácilmente con MySQL conservando altísimo rendimiento sin ensuciar el código).
+
+## Paso 1: Inicializar el Proyecto en Go
+
+1. Verifica que tienes Go instalado (`go version` en tu terminal). Se recomienda Go 1.21 o superior.
+2. Abre una terminal en una carpeta limpia (ej. `cdelu-go` fuera del código de JS actual) y ejecuta:
+   ```bash
+   go mod init github.com/tu-organizacion/cdelu-backend
+   ```
+3. Instala las dependencias principales (Fiber, driver de MySQL, sqlx, cargador de .env, middlewares):
+   ```bash
+   go get -u github.com/gofiber/fiber/v2
+   go get -u github.com/gofiber/fiber/v2/middleware/cors
+   go get -u github.com/gofiber/fiber/v2/middleware/logger
+   go get -u github.com/go-sql-driver/mysql
+   go get -u github.com/jmoiron/sqlx
+   go get -u github.com/joho/godotenv
+   go get -u github.com/golang-jwt/jwt/v5
+   go get -u golang.org/x/crypto/bcrypt
+   ```
+
+## Paso 2: Crear la Estructura de Directorios Pura (Clean Architecture)
+
+A diferencia de Express/Fastify donde todo suele acabar en `src`, Go tiene divisiones más robustas recomendadas:
+
+Ejecuta los siguientes comandos (o crea las carpetas manualmente) en la raíz del proyecto nuevo:
+```bash
+mkdir -p cmd/api
+mkdir -p internal/config
+mkdir -p internal/database
+mkdir -p internal/models
+mkdir -p internal/handlers
+mkdir -p internal/repositories
+mkdir -p pkg/utils
+```
+
+## Paso 3: Configurar la Conexión a MySQL (`internal/database/db.go`)
+
+Crea este archivo e implementa la lógica de conexión con **Connection Pooling**. Esto es vital en Go: no usamos poolers externos de npm, la base estándar `database/sql` de Go gestiona los hilos de red en C internamente para evitar que la base de datos muera ante picos de miles de usuarios.
+
+```go
+package database
+
+import (
+	"fmt"
+	"log"
+	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+)
+
+var DB *sqlx.DB
+
+func ConnectDB(dsn string) {
+	var err error
+	DB, err = sqlx.Connect("mysql", dsn)
+	if err != nil {
+		log.Fatalln("Error fatal conectando a la base de datos:", err)
+	}
+
+	// Optimizaciones Críticas de Concurrencia que Node.js no posee:
+	DB.SetMaxOpenConns(100)                // Límite de conexiones simultáneas para no saturar MySQL
+	DB.SetMaxIdleConns(20)                 // Conexiones "dormidas" mantenidas abiertas listas para usar en ms
+	DB.SetConnMaxLifetime(time.Minute * 5) // El recolector cerrará y abrirá reciclajes cada 5 minutos
+
+	fmt.Println("¡Conexión a MySQL exitosa y en pool óptimo!")
+}
+```
+
+## Paso 4: Definir Entidades / Modelos (`internal/models/news.go`)
+
+Go es de tipado estricto. Recrearemos la tabla de noticias (`news`) pasándola a una Estructura o Struct (similar a una Interface de TypeScript pero compila a memoria máquina nativa).
+
+```go
+package models
+
+// Los tags `db:"..."` son leídos por la librería de SQL y los `json:"..."` arman tu JSON de salida.
+type News struct {
+	ID        int    `db:"id" json:"id"`
+	Title     string `db:"title" json:"title"`
+	Content   string `db:"content" json:"content"`
+	ImageURL  string `db:"image_url" json:"image_url"`
+	CreatedAt string `db:"created_at" json:"created_at"`
+}
+```
+
+## Paso 5: Crear el Repositorio de Datos (`internal/repositories/news_repo.go`)
+
+Aquí hacemos las consultas a MySQL. Separar esto del controlador hace que el código sea testeable e infinitamente escalable si cambias a futuro a Postgres o MongoDB.
+
+```go
+package repositories
+
+import (
+	"github.com/tu-organizacion/cdelu-backend/internal/database"
+	"github.com/tu-organizacion/cdelu-backend/internal/models"
+)
+
+// ObtenerNoticiasRecientes es una función que pide MySQL puro
+func ObtenerNoticiasRecientes() ([]models.News, error) {
+	noticias := []models.News{}
+	query := `SELECT id, title, content, image_url, created_at FROM news ORDER BY created_at DESC LIMIT 20`
+	
+	err := database.DB.Select(&noticias, query)
+	return noticias, err
+}
+```
+
+## Paso 6: Crear el Controlador HTTP (Handler) (`internal/handlers/news_handler.go`)
+
+Este archivo captura el `Request` y genera una respuesta `JSON`, lo que llamaríamos Controller en tu API Fastify.
+
+```go
+package handlers
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/tu-organizacion/cdelu-backend/internal/repositories"
+)
+
+func GetNoticias(c *fiber.Ctx) error {
+	noticias, err := repositories.ObtenerNoticiasRecientes()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Error interno al obtener el feed de noticias",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"data":   noticias,
+	})
+}
+```
+
+## Paso 7: El Punto de Acceso Principal del Servidor (`cmd/api/main.go`)
+
+Este es el reemplazo de tu pesado `index.js`. Aquí se carga el `.env`, se arranca MySQL, se mapean las rutas y despega Fiber.
+
+```go
+package main
+
+import (
+	"log"
+	"os"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/joho/godotenv"
+
+	"github.com/tu-organizacion/cdelu-backend/internal/database"
+	"github.com/tu-organizacion/cdelu-backend/internal/handlers"
+)
+
+func main() {
+	// 1. Cargar el entorno (como require('dotenv').config() en Node)
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Aviso: No se encontró archivo .env local")
+	}
+
+	// 2. Conectar MySQL (Ajusta los accesos reales que tenías en CPanel/Servidor)
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "root:password@tcp(127.0.0.1:3306)/cdelu_db?parseTime=true"
+	}
+	database.ConnectDB(dsn)
+
+	// 3. Crear aplicación hiper-rápida (Equivalente al fastify())
+	app := fiber.New(fiber.Config{
+		DisableStartupMessage: false,
+	})
+
+	// 4. Middlewares globales
+	app.Use(logger.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
+
+	// 5. Agrupación y Mapeo de Rutas (Tu viejo router)
+	api := app.Group("/api/v1")
+	
+	// Endpoint de Ejemplo
+	api.Get("/news", handlers.GetNoticias)
+	
+	// Healthcheck público
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.SendString("Go Server Running OK!")
+	})
+
+	// 6. Arrancar servidor por el puerto asignado
+	log.Fatal(app.Listen(":3000"))
+}
+```
+
+## Paso 8: Cómo Compilar y Subir a Producción (El Súper Poder de Go)
+
+En Node, tenías que mandar una inmensa carpeta de `node_modules` (o instalarla en producción tirando CPU local) e iniciar Node usando PM2. 
+
+En Go, todo eso **desaparece**:
+
+### En Desarrollo Local (tu programador):
+Para levantar un servidor en caliente igual a `nodemon`, ejecuta en tu terminal:
+```bash
+go run cmd/api/main.go
+```
+*(Para auto-reload puede instalar localmente el paquete oficial `air`).*
+
+### Para Subir tu Servidor (Producción Cpanel/VM):
+Esto es brujería frente a como funciona Node. Desde la computadora del backend compilamos un ejecutable **Nativo**.
+
+```bash
+# Compilar binario nativo estático optimizado para servidores de Linux (CentOS/Ubuntu/Debian)
+GOOS=linux GOARCH=amd64 go build -o main-cdelu cmd/api/main.go
+```
+Ese comando genera 1 SOLO ARCHIVO LLAMADO `main-cdelu` (que pesa alrededor de 15 a 25 MB máximo).
+- Sin dependencias de npm.
+- Sin node_modules.
+- Sin problemas de versiones de Engine Node en los servidores.
+- Puedes arrastrarlo al SFTP, darle permisos de ejecución (`chmod +x main-cdelu`) y correrlo directamente. Es el backend C/C++ pero con diseño web moderno de microsegundos de latencia.
+
+## Resumen de Tareas Inmediatas de los Próximos 3 Días:
+1. Usar esta guía de bootstrap para levantar Fiber y MySQL.
+2. Hacer una ingeniería inversa de la tabla de `users`, pasarla a un struct Go, y crear `<NombreModulo>Handler` copiando los scripts JWT/bcrypt.
+3. Configurar un enrutador fuerte que mapee los endpoints actuales de loterías, encuestas y noticias. 
+4. Traducir gradualmente cada query a consultas puras de `sqlx`.

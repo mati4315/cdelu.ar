@@ -28,33 +28,41 @@ async function statsRoutes(fastify, options) {
     }
   }, async (request, reply) => {
     try {
-      // Obtener total de noticias
-      const [noticias] = await pool.query('SELECT COUNT(*) as total FROM news');
-      // Obtener total de usuarios
-      const [usuarios] = await pool.query('SELECT COUNT(*) as total FROM users');
-      // Obtener total de comentarios en noticias
-      const [comentarios] = await pool.query('SELECT COUNT(*) as total FROM comments');
-      // Obtener total de comunidad
-      const [comunidad] = await pool.query('SELECT COUNT(*) as total FROM com');
-      // Obtener total del feed unificado
-      const [feed] = await pool.query('SELECT COUNT(*) as total FROM content_feed');
-      // Obtener total de likes (noticias + comunidad)
-      const [likes] = await pool.query('SELECT (SELECT COUNT(*) FROM likes) + (SELECT COUNT(*) FROM com_likes) as total');
-      // Obtener total de comentarios de comunidad
-      const [comComments] = await pool.query('SELECT COUNT(*) as total FROM com_comments');
+      // Función auxiliar para obtener conteo de manera segura
+      const getCount = async (table) => {
+        try {
+          const [rows] = await pool.query(`SELECT COUNT(*) as total FROM ${table}`);
+          return rows[0].total;
+        } catch (e) {
+          console.warn(`⚠️ Error al contar en tabla ${table}:`, e.message);
+          return 0;
+        }
+      };
 
-      /**
-       * Respuesta con todos los datos para el dashboard
-       * @type {{ totalNews: number, totalUsers: number, totalComments: number, totalCom: number, totalFeed: number, totalLikes: number, totalComComments: number }}
-       */
+      const totalNews = await getCount('news');
+      const totalUsers = await getCount('users');
+      const totalComments = await getCount('comments');
+      const totalCom = await getCount('com');
+      const totalFeed = await getCount('content_feed');
+      
+      let totalLikes = 0;
+      try {
+        const [likes] = await pool.query('SELECT (SELECT COUNT(*) FROM likes) + (SELECT COUNT(*) FROM com_likes) as total');
+        totalLikes = likes[0].total;
+      } catch (e) {
+        console.warn('⚠️ Error al contar likes:', e.message);
+      }
+
+      const totalComComments = await getCount('content_comments');
+
       reply.send({
-        totalNews: noticias[0].total,
-        totalUsers: usuarios[0].total,
-        totalComments: comentarios[0].total,
-        totalCom: comunidad[0].total,
-        totalFeed: feed[0].total,
-        totalLikes: likes[0].total,
-        totalComComments: comComments[0].total
+        totalNews,
+        totalUsers,
+        totalComments,
+        totalCom,
+        totalFeed,
+        totalLikes,
+        totalComComments
       });
     } catch (error) {
       request.log.error(error);

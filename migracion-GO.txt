@@ -1,0 +1,112 @@
+# Guía Definitiva de Migración: Backend de Fastify (Node.js) a Go (Golang)
+
+Esta guía está diseñada para que tu equipo de backend migre el proyecto `cdelu` desde cero hacia Go, aprovechando al máximo la concurrencia, el rendimiento y la tipificación fuerte de este lenguaje. El objetivo es obtener un sistema base altamente escalable, eficiente y estructurado para un diario online/plataforma de loterías y noticias con grandes posibles volúmenes de tráfico.
+
+## 1. Análisis del Stack Actual vs. Go
+
+**El Stack Actual (basado en `package.json`):**
+- **Core:** Node.js (Single-threaded Event Loop), consumiendo considerable RAM/CPU.
+- **Framework:** Fastify (Muy rápido en Node, pero limitado por el Event Loop de V8 para tareas CPU-intensivas).
+- **DB:** MySQL (`mysql2`).
+- **Media:** `sharp` (imágenes), `fluent-ffmpeg` (videos).
+- **Auth:** `bcrypt`, `@fastify/jwt`.
+
+**El Stack Destino (Go):**
+- **Core:** Go compilado a binario nativo, concurrencia multi-threaded real (Goroutines) y minúsculo footprint de memoria.
+- **Beneficio Principal:** Las tareas de procesamiento de videos e imágenes, y el despacho de cientos de miles de noticias se manejarán con verdaderos hilos del SO a través de goroutines, sin bloquear servidor. Un backend en Go puede procesar el quíntuple de requests que Fastify utilizando un décimo de la memoria RAM.
+
+---
+
+## 2. Tecnologías y Librerías Óptimas en Go
+
+Para sustituir los paquetes de NPM por equivalentes de alto rendimiento en Go, tu desarrollador deberá usar:
+
+1. **Framework HTTP / Router:**
+   - *Recomendación:* **Fiber** (`github.com/gofiber/fiber/v2`) o **Chi** (`github.com/go-chi/chi/v5`).
+   - *Por qué:* Fiber está inspirado en Express/Fastify y será fácil de adoptar para desarrolladores JS. Es uno de los frameworks web más rápidos para Go (usa `fasthttp` debajo). Si prefieren apegarse estrictamente a la librería estándar (lo más idiomático a futuro), Go 1.22+ y `Chi` son excepcionales.
+2. **Base de Datos (MySQL):**
+   - *Driver:* `github.com/go-sql-driver/mysql`
+   - *Query Builder / ORM:* **Evitar esquivar ORMs pesados como GORM si se busca óptimo rendimiento.** 
+   - *Recomendación Máxima:* **sqlc** (`https://sqlc.dev/`). Escribes tus queries en SQL puro y sqlc genera código Go type-safe y altamente optimizado. Alternativamente, usar **sqlx** (`github.com/jmoiron/sqlx`).
+3. **Autenticación (Sustituye a fastify-jwt y bcrypt):**
+   - *JWT:* `github.com/golang-jwt/jwt/v5`
+   - *Hash de contraseñas:* `golang.org/x/crypto/bcrypt`
+4. **Procesamiento de Imágenes (Sustitución de Sharp):**
+   - *Recomendación:* `github.com/h2non/bimg`
+   - *Por qué:* Al igual que `sharp`, `bimg` envuelve la librería en C `libvips`. El rendimiento de redimensionado, recorte o marca de agua será igual o mucho más rápido. Si no quieren depender de librerías en C en el servidor, usar una 100% nativa de Go como `github.com/disintegration/imaging` (algo más lenta, pero fácil de instalar).
+5. **Procesamiento de Video (Sustitución de fluent-ffmpeg):**
+   - Go tiene una maravillosa integración con procesos externos. Se deberá usar el paquete estándar `os/exec` para ejecutar ffmpeg en el sistema. Alternativamente existe el wrapper `github.com/u2takey/ffmpeg-go` para usar sintaxis amigable en formato builder.
+
+---
+
+## 3. Arquitectura Recomendada (Clean Architecture / Entorno Escalable)
+
+Nunca usar un archivo "índice monolítico" (`index.js`). Para aplicaciones Go preparadas para miles de transacciones y equipos grandes, aplica el "Go Standard Project Layout" enfocado al Domain-Driven Design (DDD):
+
+```text
+/cdelu-go
+├── /cmd
+│   └── /api            # Punto de inicio estricto (aquí va tu main.go, arranca el servidor)
+├── /internal
+│   ├── /config         # (Equivalente a dotenv) carga de variables de la app
+│   ├── /domain         # (Entidades puras): Models (User, News, Lottery, Survey) y las *interfaces*
+│   ├── /repository     # Implementación e interacción con MySQL (sqlc o base de datos/sql)
+│   ├── /usecase        # Lógica de Negocio Pura (Separada del framework web)
+│   └── /delivery       # Handlers HTTP, middlewares de Fiber/Chi y controladores API REST
+├── /pkg                # Librerías estáticas propias (Ej: funciones generales de hasheo, generadores de OTP)
+├── /sql                # Aquí se guardan los esquemas y migraciones (Ej: dbmate o golang-migrate)
+├── go.mod
+└── go.sum
+```
+
+---
+
+## 4. Plan de Trabajo Paso a Paso para el Desarrollador
+
+### Fase 1: Entorno, Base de Datos y Rutas
+1. **Inicialización:** `go mod init github.com/tu-organizacion/cdelu-backend`
+2. **Migración de Base de Datos:**
+   - Go exige un versionamiento de base de datos sólido (no más scripts JS improvisados). Integrar una herramienta como **golang-migrate** (`github.com/golang-migrate/migrate`).
+   - Todos los `.sql` deben pasar por un sistema de migración (`up.sql` y `down.sql`).
+3. **Capa Data-Access Óptima:**
+   - Instalar el binario de **sqlc**. Proveer el "schema" y escribir las consultas crudas `.sql`.
+   - Compilar las rutinas de la DB que Go ejecutará milisegundos sin latencia.
+
+### Fase 2: Implementar la Lógica y Seguridad (Use Case)
+1. Escribir los servicios desacoplados basados en Interfaces.
+   - El servicio de "Noticias" no sabe cómo se guardan, solo pide al `repository` que lo haga. Esto permite escalar enormemente o cambiar a PostgreSQL fácil a futuro.
+2. Implementar cifrado en `pkg/hash` importando `x/crypto/bcrypt`.
+
+### Fase 3: La API Web (Delivery / Controllers / Middlewares)
+1. **Routing:** Crear el sistema de rutas con Fiber `app.Get()`, `app.Post()`.
+2. **Middleware JWT:** Escribir un middleware que extraiga el Bearer Token, verifique (`golang-jwt`) e inyecte la metadata de la sesión del usuario (ID interno, Rol) dentro de los *Contextos* (Fiber usa `c.Locals("user")`; estándar usa `context.WithValue`).
+3. **CORS y Helmet:** Fiber incluye utilidades integradas de alta velocidad de `fiber/middleware/cors` y `fiber/middleware/helmet`.
+
+### Fase 4: Manejo Nativo Concurrente (Lo más poderoso de Go)
+- **Procesamiento en Segundo Plano (Ej: Enviar emails masivos, renderizado ffmpeg, o subasta de lotería):**
+  En Node usabas asincronía (Event Loops); en Go utilizarás **Goroutines** puramente nativas.
+  ```go
+  // En Go, invocar procesos sin bloquear la solicitud del cliente es tan fácil como:
+  go procesarVideoParaFeed(videoRuta)
+  go notificarGanadoresLoteria(loteriaID)
+  ```
+  Esto lanza mini-hilos concurrentes paralelos e independientes consumiendo 2 Kilobytes de RAM cada uno.
+
+---
+
+## 5. Optimizaciones Máximas al Migrar
+
+Tu desarrollador debe aplicar estrictamente estas reglas desde el día 1 para que el sistema "vuele":
+
+1. **Connection Pooling de MySQL (CRÍTICO):** La API de Node.js requería el gestor de "Pools" externo. La librería `database/sql` implementa su propio pool seguro por diseño nativo, PERO HAY QUE CONFIGURARLO o el backend se saturará bajo ataque.
+   ```go
+   db.SetMaxOpenConns(100)
+   db.SetMaxIdleConns(20)
+   db.SetConnMaxLifetime(time.Minute * 5)
+   ```
+2. **Memory Pointers y Garbage Collector (GC):** En las búsquedas de MySQL, devolver arreglos inmensos de Estructuras (Structs) va a saturar la memoria y estresar al Garbage Collector. Se debe trabajar siempre mediante punteros de objetos (`[]*domain.News` en vez de devoleder la entidad copiada).
+3. **Sync.Pool para Serialización JSON:** Los endpoint públicos consumidos repetitivamente (Como ver las 10 noticias del Feed Principal) procesan los mismos JSON una y otra vez. Usar `sync.Pool` para reusar los buffers de bytes cuando se hace la codificación JSON, y reducirá el consumo de RAM virtualmente a cero.
+4. **Graceful Shutdown (Salida Limpia):** El sistema debe escuchar los eventos del Sistema Operativo (`SIGINT/SIGTERM`). Al reiniciar la app, Go detendrá las peticiones nuevas, esperará que las peticiones en curso terminen sus procesos en la DB, y cerrará sus Pooles a MySQL limpiamente. Evita fallos críticos o pérdida de tickets de loterías y data en producción al actualizar.
+5. **Docker Multi-stage Build:**
+   Cuando terminen, que utilicen `Dockerfile` *multi-stage*. Construyen con una imagen de `golang`, y empaquetan en una imagen de base `scratch` o `alpine`.
+   *Resultado:* Tu backend que antes se desplegaba con +400MB de `node_modules` y Node base image, **se convertirá en un minúsculo archivo estático de ejecución de ~25 Megabytes capaz de soportar hasta 50.000 requests concurrentes por segundo en servidores de nivel medio.**

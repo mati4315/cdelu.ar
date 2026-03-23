@@ -68,15 +68,31 @@ async function importLatestNews() {
 
         // Generar título con IA
         console.log('Generando título con IA...');
-        const generatedTitle = await aiService.generateTitle(content);
-        // Limitar el título a 255 caracteres
-        const truncatedTitle = generatedTitle.substring(0, 255);
-        console.log('Título generado:', truncatedTitle);
+        let generatedTitle = latestNews.title;
+        let truncatedTitle = generatedTitle.substring(0, 255);
+        try {
+            const aiTitle = await aiService.generateTitle(content);
+            if (aiTitle) {
+                generatedTitle = aiTitle;
+                truncatedTitle = generatedTitle.substring(0, 255);
+                console.log('Título generado:', truncatedTitle);
+            }
+        } catch (err) {
+            console.log('Error generando título con IA, usando original.', err.message);
+        }
 
         // Generar resumen de la descripción con IA
         console.log('Generando resumen de la descripción con IA...');
-        const summarizedContent = await aiService.generateSummary(content);
-        console.log('Resumen generado:', summarizedContent);
+        let summarizedContent = latestNews.contentSnippet || latestNews.description || "Resumen no disponible.";
+        try {
+            const aiSummary = await aiService.generateSummary(content);
+            if (aiSummary) {
+                summarizedContent = aiSummary;
+                console.log('Resumen generado exitosamente');
+            }
+        } catch (err) {
+            console.log('Error generando resumen con IA, usando predeterminado.', err.message);
+        }
 
         // Insertar la nueva noticia
         const [result] = await pool.query(

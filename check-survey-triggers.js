@@ -65,8 +65,8 @@ async function checkSurveyTriggers() {
       `;
 
       // Ejecutar cada trigger por separado
-      await pool.execute('DROP TRIGGER IF EXISTS update_option_votes_count');
-      await pool.execute(`
+      await pool.query('DROP TRIGGER IF EXISTS update_option_votes_count');
+      await pool.query(`
         CREATE TRIGGER update_option_votes_count
         AFTER INSERT ON survey_votes
         FOR EACH ROW
@@ -75,8 +75,8 @@ async function checkSurveyTriggers() {
         WHERE id = NEW.option_id
       `);
 
-      await pool.execute('DROP TRIGGER IF EXISTS update_option_votes_count_delete');
-      await pool.execute(`
+      await pool.query('DROP TRIGGER IF EXISTS update_option_votes_count_delete');
+      await pool.query(`
         CREATE TRIGGER update_option_votes_count_delete
         AFTER DELETE ON survey_votes
         FOR EACH ROW
@@ -85,8 +85,8 @@ async function checkSurveyTriggers() {
         WHERE id = OLD.option_id
       `);
 
-      await pool.execute('DROP TRIGGER IF EXISTS create_survey_stats');
-      await pool.execute(`
+      await pool.query('DROP TRIGGER IF EXISTS create_survey_stats');
+      await pool.query(`
         CREATE TRIGGER create_survey_stats
         AFTER INSERT ON surveys
         FOR EACH ROW

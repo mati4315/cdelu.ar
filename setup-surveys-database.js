@@ -20,7 +20,7 @@ async function setupSurveysDatabase() {
     const commands = sqlContent
       .split(';')
       .map(cmd => cmd.trim())
-      .filter(cmd => cmd.length > 0 && !cmd.startsWith('--'));
+      .filter(cmd => cmd.length > 0);
     
     console.log(`📝 Ejecutando ${commands.length} comandos SQL...`);
     
