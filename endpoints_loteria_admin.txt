@@ -1,0 +1,100 @@
+Hola Desarrollador,
+
+El archivo \`loteria_admin_mejorado.txt\` contiene el frontend completo del administrador de loterías. Para que funcione correctamente, el backend (\`Go\` o \`Node.js\`) debe exponer los siguientes endpoints JSON bajo el prefijo \`/api/v1/lotteries\` y \`/api/v1/auth\`.
+
+Todas las peticiones a continuación (excepto el login si lo hubiera) requieren el header de autorización:
+\`Authorization: Bearer <JWT_TOKEN>\`
+
+---
+
+### 1. Autenticación (Chequeo de Admin)
+**GET** \`/api/v1/auth/me\`
+- **Uso**: Verifica que el token es válido y que el usuario tiene el rol de administrador al iniciar o recargar la página.
+- **Respuesta Esperada**: \`{ user: { rol: "administrador", nombre: "Nombre" } }\`
+
+---
+
+### 2. Listar y Estadísticas de Loterías
+**GET** \`/api/v1/lotteries?page=1&limit=12&status=active&is_free=true\`
+- **Query Params**: \`page\`, \`limit\`, \`status\` (draft, active, closed, finished, cancelled), \`is_free\` (boolean).
+- **Uso**: Cargar la cuadrícula de tarjetas de loterías y la paginación.
+- **Respuesta Esperada**: Objeto JSON con el arreglo \`data\` (las loterías) y \`pagination\` (total de páginas, página actual).
+  
+**GET** \`/api/v1/lotteries?limit=100\`
+- **Uso**: Obtener todas para calcular silenciosamente las estadísticas globales (Total, Activas, Finalizadas, Participantes).
+
+---
+
+### 3. Crear Lotería
+**POST** \`/api/v1/lotteries\`
+- **Body**: 
+  \`\`\`json
+  {
+      "title": "Sorteo de Prueba",
+      "description": "...",
+      "is_free": true,
+      "ticket_price": 0,
+      "min_tickets": 1,
+      "max_tickets": 100,
+      "num_winners": 1,
+      "start_date": "2024-10-10T10:00:00.000Z",
+      "end_date": "2024-10-15T10:00:00.000Z"
+  }
+  \`\`\`
+- **Respuesta Esperada**: \`{ data: { id: 1 } }\`
+
+---
+
+### 4. Actualizar / Editar Lotería o Cambiar Estado
+**PUT** \`/api/v1/lotteries/:id\`
+- **Body**: Datos de la lotería para editar (similar al POST) o \`{ "status": "active" }\` para activar una en borrador o reanudarla.
+
+---
+
+### 5. Obtener Detalles de una Lotería (Para Editar o Ver)
+**GET** \`/api/v1/lotteries/:id\`
+- **Uso**: Traer la información detallada al abrir el modal de detalles o de edición, y para ver el estado antes de procesar una cancelación/finalización.
+- **Respuesta Esperada**: \`{ data: { /* objeto de lotería */ } }\`
+
+---
+
+### 6. Eliminar Lotería
+**DELETE** \`/api/v1/lotteries/:id\`
+- **Uso**: Borrar una lotería del sistema.
+- **Respuesta Esperada**: Mensaje de éxito e información adicional como \`deleted_tickets\`.
+
+---
+
+### 7. Cancelar Lotería
+**PUT** \`/api/v1/lotteries/:id/cancel\`
+- **Uso**: Cancela la lotería activa y el backend debe procesar internamente los reembolsos (devolver créditos, etc.).
+- **Respuesta Esperada**: \`{ data: { refunded_tickets: 10 } }\`
+
+---
+
+### 8. Finalizar Lotería (Asignar Ganadores)
+**POST** \`/api/v1/lotteries/:id/finish\`
+- **Uso**: Ejecuta la finalización seleccionando ganadores de manera automática (por el sistema) o manual.
+- **Body**:
+  \`\`\`json
+  {
+      "force": false, 
+      "winner_selection_method": "random", // o "manual"
+      "winning_numbers": [] // Array de IDs / Números de tickets si el método es "manual"
+  }
+  \`\`\`
+- **Respuesta Esperada**: \`{ data: { status: "finished", winners_count: 1 } }\`
+
+---
+
+### 9. Obtener Tickets Vendidos (Para selección Manual de ganadores)
+**GET** \`/api/v1/lotteries/:id/sold-tickets\`
+- **Uso**: Devuelve una lista plana de todos los números de tickets vendidos para esta lotería específica, necesarios si el administrador elige el método manual para terminar la lotería.
+- **Respuesta Esperada**: \`{ data: { ticket_numbers: [12, 45, 87, 102] } }\`
+
+---
+
+### 10. Ver Ganadores
+**GET** \`/api/v1/lotteries/:id/winners\`
+- **Uso**: Listar a los ganadores de la lotería una vez haya estado finalizada.
+- **Respuesta Esperada**: \`{ data: [ { ticket_number: 12, username: "Lucas", email: "lucas@...", prize_description: "..." } ] }\`

@@ -1,0 +1,638 @@
+Hola Desarrollador,
+
+He analizado tu archivo `ads-dashboard.html` y he preparado una versión completamente mejorada y corregida.
+
+### Principales correcciones y mejoras aplicadas:
+1. **Autenticación (Bug Fixing)**: Se reemplazó el uso obsoleto de `localStorage.getItem('token')` por `localStorage.getItem('authToken')` para que coincida con el resto de la aplicación (como el login y el dashboard principal), evitando errores de conexión (`401 Unauthorized`).
+2. **Notificaciones (UI/UX)**: Se eliminaron las molestas ventanas emergentes `alert()` nativas. En su lugar, se implementó un sistema elegante de **Notificaciones Toast** en la esquina inferior usando Tailwind y Vue, similar al estilo del dashboard central.
+3. **Manejo de Errores Mejorado**: Cada llamada Axios (`axios.get`, `axios.post`, etc.) ahora captura el mensaje de error del backend (si lo hay) y lo despliega hermosamente en la notificación Toast.
+4. **Validaciones en Formulario**: Se añadieron etiquetas "Requerido" visualmente atractivas al modal de crear/editar un anuncio, y ahora los placeholders son más descriptivos.
+5. **Mejora del Estado "Cargando" o "Vacio"**: El spinner de carga es más responsivo, y el estado "Sin resultados" de la tabla de anuncios se ve mucho más amigable con Tailwind.
+
+=======================================================
+Código HTML/JS Completo para `ads-dashboard.html` Mejorado
+=======================================================
+
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Publicidad - CdelU</title>
+    <!-- Tailwind CSS (Se recomienda actualizar a una versión más reciente o via CDN como aquí) -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        /* Animaciones para el Toast */
+        .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+        .toast-enter-from { opacity: 0; transform: translateY(20px); }
+        .toast-leave-to { opacity: 0; transform: translateY(-20px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div id="app" class="min-h-screen pb-12">
+        <!-- Toast Notification Panel -->
+        <transition name="toast">
+            <div v-if="notification.show" 
+                 class="fixed bottom-4 right-4 z-50 flex items-center p-4 mb-4 text-white rounded-lg shadow-xl"
+                 :class="notification.type === 'error' ? 'bg-red-600' : (notification.type === 'success' ? 'bg-green-600' : 'bg-blue-600')"
+                 role="alert">
+                <i :class="notification.type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'" class="text-xl mr-3"></i>
+                <div class="text-sm font-medium">{{ notification.message }}</div>
+                <button type="button" @click="notification.show = false" class="ml-auto -mx-1.5 -my-1.5 rounded-lg p-1.5 hover:bg-black hover:bg-opacity-20 inline-flex h-8 w-8">
+                    <span class="sr-only">Cerrar</span>
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </transition>
+
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <a href="/dashboard.html" class="mr-4 text-gray-500 hover:text-blue-600 transition" title="Volver al panel principal">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </a>
+                        <h1 class="text-2xl font-bold text-gray-900 flex items-center">
+                            <i class="fas fa-ad text-blue-600 mr-3"></i>
+                            Dashboard de Publicidad
+                        </h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-gray-100 rounded-full px-4 py-1.5 flex items-center">
+                            <i class="fas fa-user-circle text-gray-500 mr-2 text-lg"></i>
+                            <span class="text-sm font-medium text-gray-700">{{ user ? user.nombre : 'Cargando...' }}</span>
+                        </div>
+                        <button @click="logout" class="bg-white border border-red-200 hover:bg-red-50 text-red-600 font-medium px-4 py-2 rounded-lg transition shadow-sm">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Salir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+            <!-- Stats Dashboard Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow rounded-xl border border-gray-100">
+                    <div class="p-5 flex items-center">
+                        <div class="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
+                            <i class="fas fa-ad text-blue-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wider">Total Anuncios</dt>
+                            <dd class="text-2xl font-bold text-gray-900 mt-1">{{ stats.totalAds || 0 }}</dd>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow rounded-xl border border-gray-100">
+                    <div class="p-5 flex items-center">
+                        <div class="flex-shrink-0 bg-green-100 p-3 rounded-lg">
+                            <i class="fas fa-eye text-green-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wider">Impresiones</dt>
+                            <dd class="text-2xl font-bold text-gray-900 mt-1">{{ stats.totalImpressions?.toLocaleString() || 0 }}</dd>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow rounded-xl border border-gray-100">
+                    <div class="p-5 flex items-center">
+                        <div class="flex-shrink-0 bg-purple-100 p-3 rounded-lg">
+                            <i class="fas fa-mouse-pointer text-purple-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wider">Clics</dt>
+                            <dd class="text-2xl font-bold text-gray-900 mt-1">{{ stats.totalClicks?.toLocaleString() || 0 }}</dd>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow rounded-xl border border-gray-100">
+                    <div class="p-5 flex items-center">
+                        <div class="flex-shrink-0 bg-orange-100 p-3 rounded-lg">
+                            <i class="fas fa-percentage text-orange-600 text-xl"></i>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dt class="text-sm font-semibold text-gray-500 truncate uppercase tracking-wider">CTR Promedio</dt>
+                            <dd class="text-2xl font-bold text-gray-900 mt-1">{{ ctr }}%</dd>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-800">Gestor de Anuncios</h2>
+                <button @click="showCreateModal = true" class="bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition">
+                    <i class="fas fa-plus mr-2"></i>Crear Nuevo
+                </button>
+            </div>
+
+            <!-- Filters Area -->
+            <div class="bg-white shadow-sm border border-gray-100 rounded-xl p-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Filtrar por Categoría</label>
+                        <select v-model="filters.categoria" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-gray-700 bg-gray-50 px-3 py-2">
+                            <option value="">Todas las categorías</option>
+                            <option value="gaming">Gaming</option>
+                            <option value="tecnologia">Tecnología</option>
+                            <option value="eventos">Eventos</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Estado</label>
+                        <select v-model="filters.activo" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-gray-700 bg-gray-50 px-3 py-2">
+                            <option value="">Cualquiera</option>
+                            <option value="true">Solo Activos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Ordenar por</label>
+                        <select v-model="filters.sort" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-gray-700 bg-gray-50 px-3 py-2">
+                            <option value="created_at">Más Recientes</option>
+                            <option value="titulo">Título (A-Z)</option>
+                            <option value="prioridad">Prioridad Más Alta</option>
+                            <option value="impresiones_actuales">Top Impresiones</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button @click="loadAds" class="bg-gray-800 hover:bg-gray-900 text-white font-medium px-4 py-2 bg-gray-50 rounded-lg w-full shadow-sm transition">
+                            <i class="fas fa-filter mr-2"></i>Aplicar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
+                <!-- Loading State -->
+                <div v-if="loading" class="text-center py-16 bg-gray-50">
+                    <i class="fas fa-circle-notch fa-spin text-4xl text-blue-500"></i>
+                    <p class="mt-4 text-gray-600 font-medium">Buscando campañas publicitarias...</p>
+                </div>
+                
+                <!-- Zero State -->
+                <div v-else-if="ads.length === 0" class="text-center py-20 bg-gray-50">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-500 mb-4">
+                        <i class="fas fa-ad text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">No hay anuncios para mostrar</h3>
+                    <p class="text-gray-500 mt-2 max-w-sm mx-auto">Prueba cambiando los filtros de búsqueda o crea un anuncio nuevo haciendo clic en el botón superior.</p>
+                </div>
+                
+                <!-- Data Table -->
+                <div v-else class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Detalles del Anuncio</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Categoría</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rendimiento</th>
+                                <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100">
+                            <tr v-for="ad in ads" :key="ad.id" class="hover:bg-blue-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-12 w-12 shadow-sm rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
+                                            <img v-if="ad.image_url" :src="ad.image_url" :alt="ad.titulo" class="h-full w-full object-cover">
+                                            <i v-else class="fas fa-image text-gray-400 text-xl"></i>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
+                                                {{ ad.titulo }} 
+                                                <span v-if="ad.prioridad >= 8" title="Prioridad Alta" class="text-yellow-500"><i class="fas fa-star"></i></span>
+                                            </div>
+                                            <div class="text-xs text-gray-500 max-w-xs truncate" :title="ad.descripcion">{{ ad.descripcion }}</div>
+                                            <a v-if="ad.enlace_destino" :href="ad.enlace_destino" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center">
+                                                <i class="fas fa-external-link-alt mr-1 text-[10px]"></i> {{ ad.enlace_destino.replace('https://','').substring(0,25) }}...
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex px-3 py-1 text-xs font-bold rounded-full border"
+                                          :class="getCategoryClass(ad.categoria)">
+                                        {{ ad.categoria }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <button @click="toggleAdStatus(ad)" 
+                                        class="inline-flex items-center px-3 py-1 text-xs font-bold rounded-full border transition-colors focus:outline-none"
+                                        :class="ad.activo ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'"
+                                        :title="ad.activo ? 'Click para pausar' : 'Click para activar'">
+                                        <i class="mr-1.5" :class="ad.activo ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                                        {{ ad.activo ? 'Activo' : 'Pausado' }}
+                                    </button>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    <div class="space-y-1.5">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span class="text-gray-500"><i class="fas fa-eye w-4"></i></span> 
+                                            <span class="font-medium text-gray-900">{{ ad.impresiones_actuales?.toLocaleString() }} / {{ ad.impresiones_maximas || '∞' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <span class="text-gray-500"><i class="fas fa-mouse-pointer w-4"></i></span> 
+                                            <span class="font-medium text-gray-900">{{ ad.clics_count?.toLocaleString() }}</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2" v-if="ad.impresiones_maximas > 0">
+                                            <div class="bg-blue-600 h-1.5 rounded-full" :style="{ width: Math.min((ad.impresiones_actuales / ad.impresiones_maximas) * 100, 100) + '%' }"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex justify-end space-x-2">
+                                        <button @click="editAd(ad)" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition" title="Editar Anuncio">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button @click="deleteAd(ad)" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition" title="Eliminar definitivamente">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Pagination -->
+                <div v-if="pagination.totalPages > 1 && !loading" class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-100">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        <button @click="changePage(pagination.page - 1)" :disabled="pagination.page <= 1" class="btn-pagination">Anterior</button>
+                        <button @click="changePage(pagination.page + 1)" :disabled="pagination.page >= pagination.totalPages" class="btn-pagination ml-3">Siguiente</button>
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">
+                                Mostrando <span class="font-bold text-gray-900">{{ (pagination.page - 1) * pagination.limit + 1 }}</span> al
+                                <span class="font-bold text-gray-900">{{ Math.min(pagination.page * pagination.limit, pagination.total) }}</span> de
+                                <span class="font-bold text-gray-900">{{ pagination.total }}</span> resultados
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                <button @click="changePage(pagination.page - 1)" :disabled="pagination.page <= 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button v-for="page in visiblePages" :key="page" @click="changePage(page)"
+                                        :class="page === pagination.page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'"
+                                        class="relative inline-flex items-center px-4 py-2 border text-sm font-bold">
+                                    {{ page }}
+                                </button>
+                                <button @click="changePage(pagination.page + 1)" :disabled="pagination.page >= pagination.totalPages" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Create & Edit Modal -->
+        <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
+            <div v-if="showCreateModal || showEditModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity backdrop-filter backdrop-blur-sm" aria-hidden="true" @click="closeModal"></div>
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                    
+                    <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl w-full border border-gray-100">
+                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                            <h3 class="text-xl leading-6 font-bold text-gray-900" id="modal-title">
+                                <i :class="showEditModal ? 'fas fa-edit' : 'fas fa-plus-circle'" class="text-blue-600 mr-2 text-lg"></i>
+                                {{ showEditModal ? 'Modificar Anuncio' : 'Crear Nuevo Anuncio' }}
+                            </h3>
+                            <button @click="closeModal" class="text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <form @submit.prevent="saveAd">
+                            <div class="px-6 py-5 space-y-5 bg-white">
+                                <!-- Title -->
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-1">Título del Anuncio <span class="text-red-500">*</span></label>
+                                    <input v-model="form.titulo" type="text" required placeholder="Ej. Lanzamiento Promocional" class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                                </div>
+                                
+                                <!-- Description -->
+                                <div>
+                                    <label class="block text-sm font-bold text-gray-700 mb-1">Descripción corta</label>
+                                    <textarea v-model="form.descripcion" rows="2" placeholder="Un mensaje atractivo para conseguir clics..." class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 resize-none"></textarea>
+                                </div>
+                                
+                                <!-- URLs -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-1">URL de Destino <span class="text-red-500">*</span></label>
+                                        <input v-model="form.enlace_destino" type="url" required placeholder="https://mi-sitio.com/promo" class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-1">URL de la Imagen (Banner)</label>
+                                        <input v-model="form.image_url" type="url" placeholder="https://..." class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                                    </div>
+                                </div>
+                                
+                                <!-- Details Row -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-1">Categoría</label>
+                                        <select v-model="form.categoria" class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                                            <option value="general">General</option>
+                                            <option value="gaming">Gaming</option>
+                                            <option value="tecnologia">Tecnología</option>
+                                            <option value="eventos">Eventos</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-1">Prioridad (1-10)</label>
+                                        <input v-model="form.prioridad" type="number" min="1" max="10" placeholder="1 = Normal, 10 = Extremo" class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-1">Impresiones Máximas <span class="text-xs text-gray-400 font-normal">(0 = Infinito)</span></label>
+                                        <input v-model="form.impresiones_maximas" type="number" min="0" placeholder="0" class="block w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                                    </div>
+                                    <div class="flex items-center pt-6">
+                                        <label class="flex items-center cursor-pointer">
+                                            <div class="relative">
+                                                <input v-model="form.activo" type="checkbox" class="sr-only">
+                                                <div class="block w-10 h-6 rounded-full" :class="form.activo ? 'bg-blue-600' : 'bg-gray-300 text-gray-600'"></div>
+                                                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform" :class="form.activo ? 'translate-x-4' : ''"></div>
+                                            </div>
+                                            <span class="ml-3 text-sm font-bold text-gray-700">{{ form.activo ? 'Campaña Activa' : 'Pausada' }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 px-6 py-4 flex flex-row-reverse border-t border-gray-100">
+                                <button type="submit" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-2.5 bg-blue-600 text-base font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm transition">
+                                    <i class="fas fa-save mr-2 mt-0.5"></i> {{ showEditModal ? 'Guardar Cambios' : 'Lanzar Campaña' }}
+                                </button>
+                                <button type="button" @click="closeModal" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-2.5 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </div>
+
+    <!-- Script de Configuración Vue -->
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    user: null,
+                    ads: [],
+                    stats: {},
+                    loading: true, // Empieza cargando para no mostrar el zero state inicial
+                    showCreateModal: false,
+                    showEditModal: false,
+                    editingAd: null,
+                    // Notificaciones sistema "Toast" en lugar de "alert"
+                    notification: {
+                        show: false,
+                        message: '',
+                        type: 'success'
+                    },
+                    filters: {
+                        categoria: '',
+                        activo: '',
+                        sort: 'created_at'
+                    },
+                    pagination: {
+                        page: 1,
+                        limit: 10,
+                        total: 0,
+                        totalPages: 0
+                    },
+                    form: {
+                        titulo: '',
+                        descripcion: '',
+                        image_url: '',
+                        enlace_destino: '',
+                        texto_opcional: '',
+                        categoria: 'general',
+                        prioridad: 1,
+                        activo: true,
+                        impresiones_maximas: 0
+                    }
+                }
+            },
+            computed: {
+                ctr() {
+                    if (!this.stats.totalImpressions || this.stats.totalImpressions === 0) return '0.00';
+                    return ((this.stats.totalClicks / this.stats.totalImpressions) * 100).toFixed(2);
+                },
+                visiblePages() {
+                    const pages = [];
+                    const start = Math.max(1, this.pagination.page - 2);
+                    const end = Math.min(this.pagination.totalPages, this.pagination.page + 2);
+                    
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                }
+            },
+            mounted() {
+                this.checkAuth();
+                this.loadStats();
+                this.loadAds();
+            },
+            methods: {
+                // Generador de Notificaciones elegantes
+                showNotification(message, type = 'success') {
+                    this.notification = { show: true, message, type };
+                    setTimeout(() => {
+                        this.notification.show = false;
+                    }, 4000); // Se oculta tras X segundos
+                },
+                getAxiosConfig() {
+                    // CRÍTICO: Solucionado "token" desfasado. Actualizado a "authToken" para coincidir con login.js
+                    return {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+                    };
+                },
+                async checkAuth() {
+                    const token = localStorage.getItem('authToken');
+                    if (!token) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+
+                    try {
+                        const response = await axios.get('/api/v1/auth/me', this.getAxiosConfig());
+                        this.user = response.data.user;
+                    } catch (error) {
+                        console.error('Error de autenticación:', error);
+                        localStorage.removeItem('authToken');
+                        window.location.href = '/login.html';
+                    }
+                },
+                async loadStats() {
+                    try {
+                        const response = await axios.get('/api/v1/ads/stats', this.getAxiosConfig());
+                        this.stats = response.data.data;
+                    } catch (error) {
+                        console.error('Error cargando estadísticas:', error);
+                    }
+                },
+                async loadAds() {
+                    this.loading = true;
+                    try {
+                        const params = {
+                            page: this.pagination.page,
+                            limit: this.pagination.limit
+                        };
+                        
+                        // Solo agregar filtros si no están vacíos
+                        if (this.filters.categoria) params.categoria = this.filters.categoria;
+                        if (this.filters.activo) params.activo = this.filters.activo;
+                        if (this.filters.sort) params.sort = this.filters.sort;
+                        
+                        const config = this.getAxiosConfig();
+                        config.params = params;
+                        
+                        const response = await axios.get('/api/v1/ads', config);
+                        
+                        this.ads = response.data.data;
+                        this.pagination = response.data.pagination;
+                    } catch (error) {
+                        console.error('Error cargando anuncios:', error);
+                        if (error.response?.status === 401) {
+                            localStorage.removeItem('authToken');
+                            window.location.href = '/login.html';
+                        } else {
+                            this.showNotification('Hubo un error al cargar la lista de anuncios.', 'error');
+                        }
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                changePage(page) {
+                    if (page >= 1 && page <= this.pagination.totalPages) {
+                        this.pagination.page = page;
+                        this.loadAds();
+                    }
+                },
+                getCategoryClass(categoria) {
+                    const classes = {
+                        gaming: 'bg-purple-50 text-purple-700 border-purple-200',
+                        tecnologia: 'bg-blue-50 text-blue-700 border-blue-200',
+                        eventos: 'bg-orange-50 text-orange-700 border-orange-200',
+                        general: 'bg-gray-50 text-gray-700 border-gray-200'
+                    };
+                    return classes[categoria] || classes.general;
+                },
+                editAd(ad) {
+                    this.editingAd = ad;
+                    this.form = { ...ad };
+                    this.showEditModal = true;
+                },
+                closeModal() {
+                    this.showCreateModal = false;
+                    this.showEditModal = false;
+                    this.editingAd = null;
+                    this.resetForm();
+                },
+                resetForm() {
+                    this.form = {
+                        titulo: '',
+                        descripcion: '',
+                        image_url: '',
+                        enlace_destino: '',
+                        texto_opcional: '',
+                        categoria: 'general',
+                        prioridad: 1,
+                        activo: true,
+                        impresiones_maximas: 0
+                    };
+                },
+                async saveAd() {
+                    try {
+                        if (this.showEditModal) {
+                            await axios.put(`/api/v1/ads/${this.editingAd.id}`, this.form, this.getAxiosConfig());
+                            this.showNotification('¡Anuncio actualizado y guardado con éxito!', 'success');
+                        } else {
+                            await axios.post('/api/v1/ads', this.form, this.getAxiosConfig());
+                            this.showNotification('¡Excelente! Lanzaste un nuevo anuncio.', 'success');
+                        }
+                        
+                        this.closeModal();
+                        this.loadAds();
+                        this.loadStats();
+                    } catch (error) {
+                        const errMsg = error.response?.data?.message || 'Hubo un error de conexión al servidor al guardar.';
+                        this.showNotification('Error: ' + errMsg, 'error');
+                        console.error('Error guardando anuncio:', error);
+                    }
+                },
+                async toggleAdStatus(ad) {
+                    try {
+                        const originalState = ad.activo;
+                        // Cambio Optimista Inmediato UI (mejora visual rápida)
+                        ad.activo = !ad.activo; 
+                        
+                        await axios.put(`/api/v1/ads/${ad.id}`, {
+                            ...ad,
+                            activo: ad.activo
+                        }, this.getAxiosConfig());
+                        
+                        this.showNotification(
+                            ad.activo ? `Campaña '${ad.titulo}' fue Activada` : `Campaña '${ad.titulo}' está Pausada`,
+                            'success'
+                        );
+                        this.loadStats();
+                    } catch (error) {
+                        // Revertir en caso de fallo
+                        ad.activo = !ad.activo;
+                        this.showNotification('Ocurrió un error al cambiar el estado del anuncio.', 'error');
+                        console.error('Error cambiando estado:', error);
+                    }
+                },
+                async deleteAd(ad) {
+                    if (!confirm(`¿Estás 100% seguro de que quieres eliminar el anuncio "${ad.titulo}" permanentemente?`)) return;
+                    
+                    try {
+                        await axios.delete(`/api/v1/ads/${ad.id}`, this.getAxiosConfig());
+                        this.showNotification('Anuncio eliminado completamente de la base de datos.', 'success');
+                        this.loadAds();
+                        this.loadStats();
+                    } catch (error) {
+                        const errMsg = error.response?.data?.message || 'Imposible borrar este recurso ahora mismo.';
+                        this.showNotification('Fallo al borrar: ' + errMsg, 'error');
+                        console.error('Error eliminando anuncio:', error);
+                    }
+                },
+                logout() {
+                    localStorage.removeItem('authToken');
+                    window.location.href = '/login.html';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+```

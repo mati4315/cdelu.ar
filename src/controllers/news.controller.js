@@ -5,6 +5,43 @@ const { query } = require('../../config/database');
  */
 class NewsController {
   /**
+   * Obtiene una lista paginada de noticias
+   * @param {Object} req - Solicitud HTTP
+   * @param {Object} reply - Respuesta HTTP
+   */
+  async getAll(req, reply) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const sort = req.query.sort || 'latest';
+      const offset = (page - 1) * limit;
+
+      const orderClause = sort === 'oldest' ? 'created_at ASC' : 'created_at DESC';
+
+      const [{ total }] = await query('SELECT COUNT(*) as total FROM news');
+      
+      const news = await query(
+        `SELECT * FROM news ORDER BY ${orderClause} LIMIT ? OFFSET ?`,
+        [limit, offset]
+      );
+
+      return reply.send({
+        success: true,
+        data: news,
+        pagination: {
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          limit
+        }
+      });
+    } catch (error) {
+      req.log.error(error);
+      return reply.code(500).send({ success: false, message: 'Error al obtener las noticias' });
+    }
+  }
+
+  /**
    * Crea una nueva noticia
    * @param {Object} req - Solicitud HTTP
    * @param {Object} reply - Respuesta HTTP

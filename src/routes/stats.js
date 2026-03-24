@@ -55,6 +55,29 @@ async function statsRoutes(fastify, options) {
 
       const totalComComments = await getCount('content_comments');
 
+      // Lottery Stats
+      let activeLotteries = 0, ticketsSold = 0, totalRevenue = 0, totalParticipants = 0;
+      try {
+        const [l_active] = await pool.query("SELECT COUNT(*) as total FROM lotteries WHERE status = 'active'");
+        activeLotteries = l_active[0].total || 0;
+        
+        const [l_tickets] = await pool.query(
+          "SELECT COUNT(*) as sold, SUM(l.ticket_price) as revenue " +
+          "FROM lottery_tickets t JOIN lotteries l ON t.lottery_id = l.id " +
+          "WHERE t.payment_status = 'approved' OR t.payment_status = 'Aprobado'"
+        );
+        ticketsSold = l_tickets[0].sold || 0;
+        totalRevenue = l_tickets[0].revenue || 0;
+        
+        const [l_parts] = await pool.query(
+          "SELECT COUNT(DISTINCT user_id) as participants " +
+          "FROM lottery_tickets WHERE payment_status = 'approved' OR payment_status = 'Aprobado'"
+        );
+        totalParticipants = l_parts[0].participants || 0;
+      } catch (e) {
+        console.warn('⚠️ Error al obtener stats de loterias:', e.message);
+      }
+
       reply.send({
         totalNews,
         totalUsers,
@@ -62,7 +85,11 @@ async function statsRoutes(fastify, options) {
         totalCom,
         totalFeed,
         totalLikes,
-        totalComComments
+        totalComComments,
+        activeLotteries,
+        ticketsSold,
+        totalRevenue,
+        totalParticipants
       });
     } catch (error) {
       request.log.error(error);

@@ -37,7 +37,7 @@ async function userRoutes(fastify, options) {
       const [users] = await pool.query(
         `SELECT u.*, r.nombre as role 
          FROM users u 
-         JOIN roles r ON u.role_id = r.id`
+         LEFT JOIN roles r ON u.role_id = r.id`
       );
 
       // No enviar información sensible
@@ -78,7 +78,7 @@ async function userRoutes(fastify, options) {
       const [users] = await pool.query(
         `SELECT u.*, r.nombre as role 
          FROM users u 
-         JOIN roles r ON u.role_id = r.id 
+         LEFT JOIN roles r ON u.role_id = r.id 
          WHERE u.id = ?`,
         [request.user.id]
       );
@@ -186,7 +186,7 @@ async function userRoutes(fastify, options) {
       const [updatedUser] = await pool.query(
         `SELECT u.*, r.nombre as role 
          FROM users u 
-         JOIN roles r ON u.role_id = r.id 
+         LEFT JOIN roles r ON u.role_id = r.id 
          WHERE u.id = ?`,
         [id]
       );

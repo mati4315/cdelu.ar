@@ -6,10 +6,13 @@
 const repo = require('./news.repository');
 const { generateSummary, generateTitle } = require('../../services/aiService');
 
-const ALLOWED_SORT_FIELDS = ['titulo', 'created_at', 'likes_count', 'comments_count'];
+const ALLOWED_SORT_FIELDS = ['titulo', 'created_at', 'likes_count', 'comments_count', 'latest', 'oldest'];
 const ALLOWED_ORDERS = ['asc', 'desc'];
 
 function buildOrderByClause(sort, order) {
+  if (sort === 'latest') return 'ORDER BY n.created_at DESC';
+  if (sort === 'oldest') return 'ORDER BY n.created_at ASC';
+
   const sortField = ALLOWED_SORT_FIELDS.includes(sort) ? sort : 'created_at';
   const sortOrder = ALLOWED_ORDERS.includes(order) ? order : 'desc';
 

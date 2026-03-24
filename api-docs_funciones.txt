@@ -1,0 +1,174 @@
+Hola Desarrollador,
+
+Aquí tienes el código necesario para integrar la sección de **API Docs** (API Viewer) directamente como una pestaña en el `dashboard.html`, manteniendo la consistencia visual y funcional.
+
+=======================================================
+1. HTML - Contenido de la Pestaña (Insertar en tab-content area)
+=======================================================
+
+<!-- API Docs Tab Content -->
+<div class="tab-content fade-in" id="api-docs-content" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-code-square"></i>
+            <h3>CdelU API Viewer & Documentation</h3>
+        </div>
+        <div class="card-body">
+            <!-- Token Section -->
+            <div class="form-group mb-4">
+                <label class="form-label">Token de Autenticación (JWT)</label>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control" id="apiToken" placeholder="Pega tu token aquí o haz clic en refrescar">
+                    <button class="btn btn-outline" id="refreshApiToken" title="Usar token actual">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Request Controls -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">Método</label>
+                    <select class="form-control" id="apiMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="col-md-9">
+                    <label class="form-label">Endpoint</label>
+                    <div class="d-flex gap-2">
+                        <select class="form-control" id="apiEndpointSelect" style="flex: 1;">
+                            <option value="/api/v1/news">GET /api/v1/news</option>
+                            <option value="/api/v1/users/profile">GET /api/v1/users/profile</option>
+                            <option value="/api/v1/stats">GET /api/v1/stats</option>
+                            <option value="custom">-- Usar ruta personalizada --</option>
+                        </select>
+                        <input type="text" class="form-control d-none" id="apiCustomEndpoint" placeholder="/api/v1/..." style="flex: 1;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- JSON Body (Only for POST/PUT) -->
+            <div class="form-group mb-4 d-none" id="apiBodyContainer">
+                <label class="form-label">Cuerpo de la Petición (JSON)</label>
+                <textarea class="form-control" id="apiRequestBody" rows="5" style="font-family: monospace;">{
+  "titulo": "Prueba",
+  "descripcion": "Descripción..."
+}</textarea>
+            </div>
+
+            <button class="btn btn-primary mb-4" id="sendApiRequest">
+                <i class="bi bi-play-fill"></i> Enviar Petición
+            </button>
+
+            <!-- Results Section -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="m-0">Respuesta:</h5>
+                <span id="apiResponseStatus" class="badge"></span>
+            </div>
+            <pre id="apiResponseOutput" class="p-3 rounded bg-dark text-light" style="max-height: 400px; overflow-y: auto; font-size: 0.9rem;">Haz clic en enviar para ver los resultados...</pre>
+        </div>
+    </div>
+</div>
+
+=======================================================
+2. JS - Lógica de Funcionamiento (Añadir a la sección de scripts)
+=======================================================
+
+// === API DOCS LOGIC ===
+const apiTokenInput = document.getElementById('apiToken');
+const refreshApiTokenBtn = document.getElementById('refreshApiToken');
+const apiMethodSelect = document.getElementById('apiMethod');
+const apiEndpointSelect = document.getElementById('apiEndpointSelect');
+const apiCustomEndpoint = document.getElementById('apiCustomEndpoint');
+const apiBodyContainer = document.getElementById('apiBodyContainer');
+const sendApiRequestBtn = document.getElementById('sendApiRequest');
+const apiResponseOutput = document.getElementById('apiResponseOutput');
+const apiResponseStatus = document.getElementById('apiResponseStatus');
+
+// Refrescar token desde localStorage (authToken es el nombre usado en el dashboard)
+refreshApiTokenBtn?.addEventListener('click', () => {
+    const token = localStorage.getItem('authToken');
+    if (token && apiTokenInput) {
+        apiTokenInput.value = token;
+        showNotification('Token actualizado desde la sesión actual', 'success');
+    } else {
+        showNotification('No se encontró un token de sesión activo', 'warning');
+    }
+});
+
+// Cambiar visibilidad de campos según selección de método
+apiMethodSelect?.addEventListener('change', function() {
+    if (this.value === 'GET' || this.value === 'DELETE') {
+        apiBodyContainer?.classList.add('d-none');
+    } else {
+        apiBodyContainer?.classList.remove('d-none');
+    }
+});
+
+// Cambiar visibilidad de endpoint personalizado
+apiEndpointSelect?.addEventListener('change', function() {
+    if (this.value === 'custom') {
+        apiCustomEndpoint?.classList.remove('d-none');
+    } else {
+        apiCustomEndpoint?.classList.add('d-none');
+    }
+});
+
+// Ejecutar Petición API
+sendApiRequestBtn?.addEventListener('click', async () => {
+    const method = apiMethodSelect.value;
+    const finalEndpoint = apiEndpointSelect.value === 'custom' ? apiCustomEndpoint.value : apiEndpointSelect.value;
+    const token = apiTokenInput.value;
+    const bodyText = document.getElementById('apiRequestBody').value;
+
+    if (!finalEndpoint) {
+        showNotification('Por favor ingresa un endpoint válido', 'warning');
+        return;
+    }
+
+    apiResponseOutput.textContent = 'Enviando petición a ' + finalEndpoint + '...';
+    apiResponseStatus.textContent = 'Cargando...';
+    apiResponseStatus.className = 'badge bg-info';
+    
+    try {
+        const options = {
+            method,
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        };
+
+        if (method !== 'GET' && method !== 'DELETE') {
+            options.headers['Content-Type'] = 'application/json';
+            try {
+                // Validar JSON antes de enviar
+                JSON.parse(bodyText);
+                options.body = bodyText;
+            } catch (jsonErr) {
+                throw new Error('El cuerpo de la petición no es un JSON válido');
+            }
+        }
+
+        const response = await fetch(finalEndpoint, options);
+        apiResponseStatus.textContent = `${response.status} ${response.statusText}`;
+        apiResponseStatus.className = `badge ${response.ok ? 'bg-success' : 'bg-danger'}`;
+
+        const data = await response.json().catch(() => null);
+        apiResponseOutput.textContent = data ? JSON.stringify(data, null, 2) : 'La respuesta no es un JSON válido o está vacía.';
+        
+        if (response.ok) {
+            showNotification('Petición completada con éxito', 'success');
+        } else {
+            showNotification('La API devolvió un error: ' + response.status, 'error');
+        }
+    } catch (error) {
+        apiResponseOutput.textContent = `Error: ${error.message}`;
+        apiResponseStatus.textContent = 'Error de Red';
+        apiResponseStatus.className = 'badge bg-danger';
+        showNotification(error.message, 'error');
+    }
+});

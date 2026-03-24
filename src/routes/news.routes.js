@@ -41,6 +41,20 @@ const schemas = {
  * @param {Object} options - Opciones del plugin
  */
 async function newsRoutes(fastify, options) {
+  // Obtener lista paginada de noticias
+  fastify.get('/news', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100 },
+          sort: { type: 'string', enum: ['latest', 'oldest'] }
+        }
+      }
+    }
+  }, newsController.getAll);
+
   // Crear noticia
   fastify.post('/news', {
     schema: {
@@ -81,6 +95,65 @@ async function newsRoutes(fastify, options) {
       }
     }
   }, newsController.delete);
+
+  // Previsualizar noticias RSS (Frontend Modal)
+  fastify.get('/news/rss/preview', {
+    schema: {
+      tags: ['Noticias'],
+      summary: 'Obtiene las últimas noticias desde el feed RSS sin guardarlas'
+    }
+  }, async (request, reply) => {
+    try {
+      const rssService = require('../services/rssService');
+      const news = await rssService.previewRSSNews();
+      return reply.send({ success: true, data: news });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ 
+          success: false, 
+          message: 'Error al obtener RSS', 
+          error: error.message 
+      });
+    }
+  });
+
+  // Importar noticia RSS con Server-Sent Events
+  fastify.get('/news/import/stream', {
+    schema: {
+      tags: ['Noticias'],
+      summary: 'Importa una noticia desde el RSS usando Server-Sent Events',
+      querystring: {
+        type: 'object',
+        properties: {
+          index: { type: 'integer', default: 0 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const index = request.query.index || 0;
+    const rssService = require('../services/rssService');
+
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    const sendEvent = (event, data) => {
+      reply.raw.write(`event: ${event}\ndata: ${data}\n\n`);
+    };
+
+    try {
+        await rssService.importNewsIndexedStream(index, sendEvent);
+    } catch (error) {
+        request.log.error(error);
+        sendEvent('error', `Excepción no controlada: ${error.message}`);
+        sendEvent('done', 'error');
+    } finally {
+        reply.raw.end();
+    }
+  });
 }
 
 module.exports = newsRoutes; 

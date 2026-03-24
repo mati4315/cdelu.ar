@@ -21,7 +21,7 @@ async function newsRoutes(fastify) {
         properties: {
           page: { type: 'integer', minimum: 1, default: 1 },
           limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-          sort: { type: 'string', enum: ['titulo', 'created_at', 'likes_count', 'comments_count'], default: 'created_at' },
+          sort: { type: 'string', enum: ['titulo', 'created_at', 'likes_count', 'comments_count', 'latest', 'oldest'], default: 'created_at' },
           order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
         },
       },

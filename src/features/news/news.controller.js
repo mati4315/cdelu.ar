@@ -9,7 +9,11 @@ const path = require('path');
 async function getNews(request, reply) {
   try {
     const result = await service.listNews(request.query || {});
-    return reply.send(result);
+    return reply.send({
+      success: true,
+      data: result.data,
+      pagination: result.pagination
+    });
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({ error: 'Error al obtener las noticias' });
@@ -19,8 +23,8 @@ async function getNews(request, reply) {
 async function getNewsById(request, reply) {
   try {
     const news = await service.getNewsById(Number(request.params.id));
-    if (!news) return reply.status(404).send({ error: 'Noticia no encontrada' });
-    return reply.send(news);
+    if (!news) return reply.status(404).send({ success: false, error: 'Noticia no encontrada' });
+    return reply.send({ success: true, data: news });
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({ error: 'Error al obtener la noticia' });
@@ -30,7 +34,7 @@ async function getNewsById(request, reply) {
 async function createNews(request, reply) {
   try {
     const created = await service.createNews(request.body, request.user.id);
-    return reply.status(201).send(created);
+    return reply.status(201).send({ success: true, data: created });
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({ error: 'Error al crear la noticia' });
@@ -40,8 +44,8 @@ async function createNews(request, reply) {
 async function updateNews(request, reply) {
   try {
     const updated = await service.updateNews(Number(request.params.id), request.body, request.user);
-    if (!updated) return reply.status(404).send({ error: 'Noticia no encontrada' });
-    return reply.send(updated);
+    if (!updated) return reply.status(404).send({ success: false, error: 'Noticia no encontrada' });
+    return reply.send({ success: true, data: updated });
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({ error: 'Error al actualizar la noticia' });
@@ -51,8 +55,8 @@ async function updateNews(request, reply) {
 async function deleteNews(request, reply) {
   try {
     const ok = await service.deleteNews(Number(request.params.id));
-    if (!ok) return reply.status(404).send({ error: 'Noticia no encontrada' });
-    return reply.status(204).send();
+    if (!ok) return reply.status(404).send({ success: false, error: 'Noticia no encontrada' });
+    return reply.send({ success: true, message: 'Noticia eliminada correctamente' });
   } catch (error) {
     request.log.error(error);
     return reply.status(500).send({ error: 'Error al eliminar la noticia' });

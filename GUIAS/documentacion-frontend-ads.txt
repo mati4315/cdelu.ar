@@ -1,0 +1,81 @@
+====================================================
+  DOCUMENTACIÓN DE MÓDULO DE PUBLICIDAD (ADS)
+  PARA EL DESARROLLADOR FRONTEND
+====================================================
+
+Hola 👋,
+Aquí tienes un desglose técnico de todas las integraciones, correcciones y las APIs que consume el módulo del Gestor de Publicidad del Dashboard Administrativo.
+
+----------------------------------------------------
+📘 PARTE 1: APIS DEL MÓDULO (RUTAS BACKEND)
+----------------------------------------------------
+Todas las peticiones del dashboard administrativo hacia estas rutas deben enviar el encabezado:
+`Authorization: Bearer <token_jwt>` y `Content-Type: application/json` usando el wrapper `DashboardApp.apiFetch`.
+
+1. ESTADÍSTICAS GLOBALES
+   - Endpoint: `GET /api/v1/ads/stats`
+   - Función: Devuelve los conteos generales (Ads totales, impresiones totales, clicks, etc.)
+   - Formato Respuesta: snake_case (`total_ads`, `total_impresiones`, `total_clics`, `ctr_promedio`).
+
+2. OBTENER LISTA DE ANUNCIOS (CON FILTROS Y PAGINACIÓN)
+   - Endpoint: `GET /api/v1/ads`
+   - Query Params Soportados: `?page=1&limit=10&categoria=gaming&activo=true&sort=created_at`
+   - Función: Retorna la lista de anuncios junto a metadata de paginación (`data.pagination`).
+
+3. OBTENER UN ANUNCIO POR ID
+   - Endpoint: `GET /api/v1/ads/:id`
+   - Función: Devuelve toda la data de un anuncio específico (para cargar el formulario de edición).
+
+4. CREAR (GUARDAR) NUEVO ANUNCIO
+   - Endpoint: `POST /api/v1/ads`
+   - Payload JSON Ejemplo:
+     {
+       "titulo": "Mi Campaña",
+       "descripcion": "Descripción breve",
+       "enlace_destino": "https://...",
+       "image_url": "https://...",
+       "categoria": "general",
+       "prioridad": 1,
+       "impresiones_maximas": 1000,
+       "activo": true
+     }
+
+5. ACTUALIZAR ANUNCIO EXISTENTE (EDITAR O PAUSAR/ACTIVAR)
+   - Endpoint: `PUT /api/v1/ads/:id`
+   - Payload JSON: (Puede enviarse un payload parcial o completo similar al de creación).
+     Nota: El botón de encender/apagar de la tabla también usa esta ruta enviando `{ activo: true|false }`.
+
+6. ELIMINAR ANUNCIO PERMANENTEMENTE
+   - Endpoint: `DELETE /api/v1/ads/:id`
+   - Importante: Fastify fallará con HTTP 400 si se envía este `DELETE` con `Content-Type: application/json` pero sin body. Se ha programado `apiFetch` (ver Parte 2) para corregir esto dinámicamente.
+
+(Nota Pública) REGISTRAR CLICS E IMPRESIONES:
+- `POST /api/v1/ads/:id/impression`
+- `POST /api/v1/ads/:id/click`
+Estas dos rutas son **públicas** y se usarán en el front de la web para contabilizar views cuando los usuarios interactúen con el anuncio publicado.
+
+
+----------------------------------------------------
+📘 PARTE 2: CORRECCIONES EN LÓGICA Y ESTRUCTURA JS
+----------------------------------------------------
+1. ARCHIVO PRINCIPAL DEL MÓDULO (dashboard-ads.js)
+  - Se refactorizó por completo el controlador `DashboardAds`.
+  - Se removió la dependencia externa `axios`, adoptando el estándar de la app: `DashboardApp.apiFetch()`.
+  - Se aplicó el estándar CSS de Bootstrap para animaciones: ahora los modales usan `.classList.add('show')` (reemplazando `.active` que impedía ver el modal o interactuar con la pantalla).
+  - FALLBACK DE IMÁGENES ROTAS: Se incluyó `onerror="this.onerror=null; this.outerHTML='<i class=\\'bi bi-image text-muted fs-4\\'></i>'"` en la etiqueta de las imágenes en miniatura (en la tabla). Si un anuncio tiene una URL rota o el dominio (ej. via.placeholder.com) es bloqueado por un AdBlock, no se romperá la grilla y en su lugar mostrará un icono de imagen elegante.
+  - VINCULACIÓN AL WINDOW: Se exportó explícitamente el módulo añadiendo `window.DashboardAds = DashboardAds;` al final del documento. Esto permite que el enrutador de las pestañas (`dashboard-app.js`) inicialice la clase y cargue toda la data.
+
+2. CÓMPUTO DE ESTADÍSTICAS (Sintaxis Snake_Case vs CamelCase)
+  - El frontend original esperaba propiedades `camelCase` al listar información estadística, pero al conectar la API a la Base de Datos (`ads.repository.js`), los valores ahora se entregan en `snake_case` (Ej: `stats.total_impresiones`). La función `loadStats()` ya está mapeada para soportar esto.
+
+3. MOTOR BASE DE PETICIONES (dashboard-app.js)
+  - Se reparó la lógica global de `DashboardApp.apiFetch`:
+    Fastify rechaza peticiones `DELETE` con la cabecera `Content-Type: application/json` si no incluyen JSON. Por lo tanto, `apiFetch` altera dinámicamente (añade / quita) los headers o integra un `JSON.stringify({})` vacío para satisfacer el estricto requerimiento del backend al destruir anuncios.
+
+4. PLANTILLA HTML Y FORMULARIOS (dashboard.html)
+  - El formulario de modales se completó con validación estándar de HTML5.
+  - Se reutilizó el diseño CSS Global y Premium y se evitó inyectar utilidades de CSS que rompan o ensucien el código existente de Tailwind o Bootstrap.
+
+====================================================
+¡Cualquier duda, el backend y los repositorios ya están alineados completamente y activos en BD!
+====================================================

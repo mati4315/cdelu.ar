@@ -1,0 +1,86 @@
+====================================================
+  DOCUMENTACIÓN DE MÓDULO DE LOTERÍAS / SORTEOS
+  PARA EL DESARROLLADOR FRONTEND
+====================================================
+
+Hola 👋,
+Aquí tienes un desglose técnico de todas las integraciones, APIs e inserciones HTML implementadas en el módulo de Loterías del Dashboard Administrativo.
+El backend ya funciona al 100% y la base de datos MySQL tiene tabla "lotteries" en pie.
+
+----------------------------------------------------
+📘 PARTE 1: APIS DISPONIBLES (RUTAS BACKEND)
+----------------------------------------------------
+Todas las peticiones protegidas requieren usar el wrapper `DashboardApp.apiFetch(...)` que internamente envía el encabezado: `Authorization: Bearer <token_jwt>`.
+
+1. OBTENER LISTA DE LOTERÍAS (CON FILTROS Y PAGINACIÓN)
+   - Endpoint: `GET /api/v1/lotteries`
+   - Parámetros (Query): `?page=1&limit=10&status=active&is_free=true`
+   - Formato Respuesta: 
+     `{ success: true, data: [...sorteos], pagination: {...} }`
+
+2. OBTENER ESTADÍSTICAS GLOBALES
+   - Importante: El framework NO posee una ruta dedicada tipo "/stats". 
+   - El Frontend DEBE llamar a: `GET /api/v1/lotteries?limit=100` y procesar con Javascript el filtrado y el .length de los arreglos (.filter(s => s.status === 'active').length). 
+   - La función `DashboardLotteries.loadStats()` en `dashboard-lotteries.js` ya está adaptada de esta forma y funcionando.
+
+3. OBTENER DETALLE DE UNA LOTERÍA (ID)
+   - Endpoint: `GET /api/v1/lotteries/:id`
+   - Devuelve toda la información para editar / ver tickets disponibles.
+
+4. CREAR (GUARDAR) NUEVO SORTEO
+   - Endpoint: `POST /api/v1/lotteries`
+   - Payload JSON Ejemplo:
+     {
+       "title": "Gran Sorteo Navideño",
+       "description": "Explicación breve...",
+       "prize_description": "$10,000 en Efectivo",
+       "is_free": true,
+       "ticket_price": 0,
+       "min_tickets": 1,
+       "max_tickets": 100,
+       "start_date": "2024-10-10T10:00:00.000Z",
+       "end_date": "2024-10-15T10:00:00.000Z"
+     }
+
+5. ACTUALIZAR O ACTIVAR SORTEO ("PUT")
+   - Endpoint: `PUT /api/v1/lotteries/:id`
+   - Este endpoint se usa TANTO para editar un ticket existente enviando su información en el Body, como para CAMBIAR DE ESTADO.
+   - Para Activar: Enviar `{"status": "active"}` 
+   - ⚠️ ALERTA FRONTEND: Anteriormente, el JS intentaba llamar a un falso endpoint "POST /activate". Esto se corrigió. Se deberá usar el clásico PUT para activar loterías en borrador o pendientes.
+
+6. FINALIZAR LOTERÍA (SELECCIONAR GANADORES)
+   - Endpoint: `POST /api/v1/lotteries/:id/finish`
+   - Payload:
+     {
+       "force": true, // Para forzar cierre aunque haya venta mínima sin cumplir.
+       "winner_selection_method": "random" // o "manual" con "winning_numbers": []
+     }
+
+7. CANCELAR LOTERÍA (REEMBOLSOS DE CRÉDITO)
+   - Endpoint: `PUT /api/v1/lotteries/:id/cancel`
+   - El backend gestiona de forma pasiva las transacciones y cancelaciones del usuario.
+
+8. ELIMINAR LOTERÍA PERMANENTEMENTE
+   - Endpoint: `DELETE /api/v1/lotteries/:id`
+
+
+----------------------------------------------------
+📘 PARTE 2: CAMBIOS EN EL FRONTEND JS y HTML
+----------------------------------------------------
+1. INYECCIÓN DEL ECOSISTEMA HTML (`dashboard.html`):
+  - El diseño CSS de Bootstrap existía, pero el HTML era nulo. 
+  - Se agregó `<section id="lotteries-content">` junto al contenedor visual de estadísticas (Total, Activos, Finalizados).
+  - Se agregó el bloque completo del `<div id="lotteryModal">` en la parte del footer (al lado de `#adModal`) para albergar el formulario y poder editar.
+
+2. IMPORTACIÓN DE SCRIPT:
+  - Estaba el documento `dashboard-lotteries.js` fabricado, pero no enlazado en el HTML global. 
+  - Se agregó `<script src="/js/dashboard-lotteries.js"></script>` justo antes del cierre del `</body>`.
+
+3. LÓGICA DE JAVASCRIPT:
+  - En `loadStats()`: Se suprimió la llamada a un "/stats" fantasma y se calculó localmente a través de `?limit=100`.
+  - En `updateStatus()`: Se rectificó que los sorteos se activan usando el payload `{ status: 'active' }` a través del verbo `PUT`, solucionando los errores 404/400.
+  - El DOM interactúa con el estilo CSS `.show` idéntico a todos los modales de Boostrap, por lo que el formulario será fluído para los usuarios móviles y de escritorio.
+
+====================================================
+Fin de Reporte Técnico.
+====================================================
