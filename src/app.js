@@ -213,6 +213,50 @@ fastify.get('/health', {
   };
 });
 
+// GET /api/v1/modules/config - Estado público de módulos (sin autenticación)
+fastify.get('/api/v1/modules/config', async (request, reply) => {
+  try {
+    const pool = require('./config/database');
+    
+    // Auto-create and seed if needed
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS system_modules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        module_name VARCHAR(50) NOT NULL UNIQUE,
+        display_name VARCHAR(100) NOT NULL,
+        description VARCHAR(255),
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      INSERT IGNORE INTO system_modules (module_name, display_name, description, enabled) VALUES
+        ('ads',       'Publicidad',  'Banners y anuncios publicitarios en el sitio', TRUE),
+        ('lotteries', 'Sorteos',     'Sistema de sorteos y venta de tickets',        TRUE),
+        ('surveys',   'Encuestas',   'Módulo de encuestas y votaciones',             TRUE),
+        ('facebook',  'Facebook',    'Widget y login con Facebook',                  TRUE),
+        ('community', 'Comunidad',   'Feed y publicaciones de la comunidad',         TRUE)
+    `);
+
+    const [rows] = await pool.query('SELECT module_name, enabled FROM system_modules');
+    
+    // Return flat map: { ads: true, lotteries: false, ... }
+    const config = {};
+    rows.forEach(r => { config[r.module_name] = Boolean(r.enabled); });
+
+    // Short cache — 5 minutes — helps frontend perf without being stale too long
+    reply.header('Cache-Control', 'public, max-age=300');
+    reply.send({ success: true, modules: config });
+  } catch (error) {
+    console.error('Error fetching modules config:', error);
+    // On DB error, default to all modules enabled (fail-open)
+    reply.send({ 
+      success: true, 
+      modules: { ads: true, lotteries: true, surveys: true, facebook: true, community: true }
+    });
+  }
+});
+
 // Ruta para favicon (evita 404 en logs) - DEBE estar antes del hook onRequest
 fastify.get('/favicon.ico', async (request, reply) => {
   return reply.code(204).send();

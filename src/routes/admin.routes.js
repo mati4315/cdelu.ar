@@ -7,6 +7,161 @@ async function adminRoutes(fastify, options) {
     await authorize(['administrador'])(request, reply);
   };
 
+  // =============================================
+  // MODULES MANAGEMENT
+  // =============================================
+
+  // GET /api/v1/admin/modules - Listar todos los módulos (admin)
+  fastify.get('/api/v1/admin/modules', {
+    preHandler: requireAdmin
+  }, async (request, reply) => {
+    try {
+      const pool = require('../config/database');
+      
+      // Auto-create table if it doesn't exist (safe for first run)
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS system_modules (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          module_name VARCHAR(50) NOT NULL UNIQUE,
+          display_name VARCHAR(100) NOT NULL,
+          description VARCHAR(255),
+          enabled BOOLEAN NOT NULL DEFAULT TRUE,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Insert defaults if table is empty
+      await pool.query(`
+        INSERT IGNORE INTO system_modules (module_name, display_name, description, enabled) VALUES
+          ('ads',       'Publicidad',  'Banners y anuncios publicitarios en el sitio', TRUE),
+          ('lotteries', 'Sorteos',     'Sistema de sorteos y venta de tickets',        TRUE),
+          ('surveys',   'Encuestas',   'Módulo de encuestas y votaciones',             TRUE),
+          ('facebook',  'Facebook',    'Widget y login con Facebook',                  TRUE),
+          ('community', 'Comunidad',   'Feed y publicaciones de la comunidad',         TRUE)
+      `);
+
+      const [rows] = await pool.query('SELECT * FROM system_modules ORDER BY id ASC');
+      reply.send({ success: true, data: rows });
+    } catch (error) {
+      console.error('Error fetching modules:', error);
+      reply.code(500).send({ success: false, message: 'Error al obtener módulos' });
+    }
+  });
+
+  // PUT /api/v1/admin/modules/:name - Activar/desactivar un módulo (admin)
+  fastify.put('/api/v1/admin/modules/:name', {
+    preHandler: requireAdmin
+  }, async (request, reply) => {
+    try {
+      const pool = require('../config/database');
+      const { name } = request.params;
+      const { enabled } = request.body;
+
+      if (typeof enabled !== 'boolean') {
+        return reply.code(400).send({ success: false, message: 'El campo "enabled" debe ser true o false' });
+      }
+
+      const [result] = await pool.query(
+        'UPDATE system_modules SET enabled = ? WHERE module_name = ?',
+        [enabled, name]
+      );
+
+      if (result.affectedRows === 0) {
+        return reply.code(404).send({ success: false, message: `Módulo "${name}" no encontrado` });
+      }
+
+      reply.send({ 
+        success: true, 
+        message: `Módulo "${name}" ${enabled ? 'activado' : 'desactivado'} correctamente` 
+      });
+    } catch (error) {
+      console.error('Error updating module:', error);
+      reply.code(500).send({ success: false, message: 'Error al actualizar módulo' });
+    }
+  });
+
+  // GET /api/v1/admin/comments - Obtener todos los comentarios combinados
+  fastify.get('/api/v1/admin/comments', {
+    preHandler: requireAdmin
+  }, async (request, reply) => {
+    try {
+      const pool = require('../config/database');
+      const { page = 1, limit = 20 } = request.query;
+      const offset = (page - 1) * limit;
+
+      // We union both comment tables so the admin has one unified view
+      const query = `
+        SELECT c.id, c.content, c.created_at, u.username as user_name, 'news' as type, c.news_id as target_id
+        FROM comments c
+        LEFT JOIN users u ON c.user_id = u.id
+        UNION ALL
+        SELECT cc.id, cc.content, cc.created_at, u.username as user_name, 'com' as type, cc.com_id as target_id
+        FROM com_comments cc
+        LEFT JOIN users u ON cc.user_id = u.id
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      `;
+
+      const countQuery = `
+        SELECT SUM(total) as count FROM (
+          SELECT COUNT(*) as total FROM comments
+          UNION ALL
+          SELECT COUNT(*) as total FROM com_comments
+        ) t
+      `;
+
+      const [rows] = await pool.query(query, [Number(limit), Number(offset)]);
+      const [countResult] = await pool.query(countQuery);
+      
+      const total = countResult[0] && countResult[0].count ? Number(countResult[0].count) : 0;
+      const totalPages = Math.ceil(total / limit) || 1;
+
+      reply.send({
+        success: true,
+        data: rows,
+        pagination: {
+          total,
+          pages: totalPages,
+          page: Number(page),
+          limit: Number(limit)
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching admin comments:', error);
+      reply.code(500).send({ success: false, message: 'Error interno del servidor al cargar comentarios' });
+    }
+  });
+
+  // DELETE /api/v1/admin/comments/:type/:id - Eliminar un comentario
+  fastify.delete('/api/v1/admin/comments/:type/:id', {
+    preHandler: requireAdmin
+  }, async (request, reply) => {
+    try {
+      const pool = require('../config/database');
+      const { type, id } = request.params;
+      
+      let tableName = '';
+      if (type === 'news') {
+        tableName = 'comments';
+      } else if (type === 'com') {
+        tableName = 'com_comments';
+      } else {
+        return reply.code(400).send({ success: false, message: 'Tipo de comentario inválido' });
+      }
+
+      const [result] = await pool.query(`DELETE FROM ${tableName} WHERE id = ?`, [id]);
+      
+      if (result.affectedRows === 0) {
+        return reply.code(404).send({ success: false, message: 'Comentario no encontrado' });
+      }
+
+      reply.code(204).send();
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      reply.code(500).send({ success: false, message: 'Error interno al intentar eliminar el comentario' });
+    }
+  });
+
   // POST /api/v1/admin/purge-cache - Purgar caché del sistema
   fastify.post('/api/v1/admin/purge-cache', {
     preHandler: requireAdmin,

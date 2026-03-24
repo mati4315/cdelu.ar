@@ -46,6 +46,14 @@
                         <i class="bi bi-newspaper nav-icon"></i>
                         <span>Noticias</span>
                     </a>
+                    <a href="#com" class="nav-link" data-tab="com">
+                        <i class="bi bi-chat-dots-fill nav-icon"></i>
+                        <span>Comunidad</span>
+                    </a>
+                    <a href="#comments" class="nav-link" data-tab="comments">
+                        <i class="bi bi-chat-left-dots-fill nav-icon"></i>
+                        <span>Comentarios</span>
+                    </a>
                     <a href="#lotteries" class="nav-link" data-tab="lotteries">
                         <i class="bi bi-ticket-perforated-fill nav-icon"></i>
                         <span>Sorteos</span>
@@ -65,6 +73,10 @@
                     <a href="#maintenance" class="nav-link" data-tab="maintenance">
                         <i class="bi bi-tools nav-icon"></i>
                         <span>Mantenimiento</span>
+                    </a>
+                    <a href="#modules" class="nav-link" data-tab="modules">
+                        <i class="bi bi-puzzle-fill nav-icon"></i>
+                        <span>Módulos</span>
                     </a>
                 </div>
 
@@ -438,7 +450,7 @@
 
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0" id="adsTable" style="display: none;">
-                                    <thead style="background-color: var(--bg-tertiary); color: var(--text-secondary);">
+                                    <thead style="background-color: #486eb3; color: #ffffff;">
                                         <tr>
                                             <th class="ps-4">Anuncio</th>
                                             <th>Categoría</th>
@@ -455,6 +467,91 @@
                             
                             <!-- Pagination -->
                             <div id="adsPaginationContainer" class="d-flex justify-content-between align-items-center p-3 border-top" style="border-color: var(--border-primary) !important; display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- === TAB: COMUNIDAD === -->
+                <section id="com-content" class="tab-content">
+                    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem;">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom" style="border-color: var(--border-primary) !important;">
+                                <h3 class="mb-0 fw-bold"><i class="bi bi-chat-dots text-primary me-2"></i> Gestión de Comunidad</h3>
+                                <button class="btn btn-primary" onclick="DashboardCom.openModal()">
+                                    <i class="bi bi-plus-lg"></i> Crear Publicación
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm" style="border-radius: 1rem;">
+                        <div class="card-body p-0" style="min-height: 400px; position: relative;">
+                            <div id="comLoader" class="position-absolute top-50 start-50 translate-middle" style="display: none; z-index: 10;">
+                                <div class="loader-spinner mb-2 mx-auto"></div>
+                                <div class="text-muted small">Cargando publicaciones...</div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="comTable" style="display: none;">
+                                    <thead style="background-color: #486eb3; color: #ffffff;">
+                                        <tr>
+                                            <th class="ps-4">Título</th>
+                                            <th>Descripción</th>
+                                            <th>Fecha</th>
+                                            <th class="text-end pe-4">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="comListContainer">
+                                        <!-- JS Injected Coms -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <div id="comPaginationContainer" class="d-flex justify-content-between align-items-center p-3 border-top" style="border-color: var(--border-primary) !important; display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- === TAB: COMMENTS === -->
+                <section id="comments-content" class="tab-content">
+                    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem;">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-0 flex-wrap gap-3 pb-0">
+                                <h3 class="mb-0 fw-bold"><i class="bi bi-chat-left-dots text-primary me-2"></i> Moderación de Comentarios</h3>
+                                <div class="text-muted small">Todos los comentarios de Noticias y Comunidad</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm" style="border-radius: 1rem;">
+                        <div class="card-body p-0" style="min-height: 400px; position: relative;">
+                            <div id="commentsLoader" class="position-absolute top-50 start-50 translate-middle" style="display: none; z-index: 10;">
+                                <div class="loader-spinner mb-2 mx-auto"></div>
+                                <div class="text-muted small">Cargando comentarios...</div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="commentsTable" style="display: none;">
+                                    <thead style="background-color: #486eb3; color: #ffffff;">
+                                        <tr>
+                                            <th class="ps-4">Usuario</th>
+                                            <th>Comentario</th>
+                                            <th>Origen</th>
+                                            <th>Fecha</th>
+                                            <th class="text-end pe-4">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="commentsListContainer">
+                                        <!-- JS Injected Comments -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <div id="commentsPaginationContainer" class="d-flex justify-content-between align-items-center p-3 border-top" style="border-color: var(--border-primary) !important; display: none;">
                             </div>
                         </div>
                     </div>
@@ -482,7 +579,7 @@
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0" id="usersTable">
-                                    <thead style="background-color: var(--bg-tertiary); color: var(--text-secondary);">
+                                    <thead style="background-color: #486eb3; color: #ffffff;">
                                         <tr>
                                             <th class="ps-4">Usuario</th>
                                             <th>Email</th>
@@ -568,6 +665,29 @@
                             </div>
                             <pre id="apiResponseOutput" class="p-4 rounded border" style="max-height: 400px; overflow-y: auto; font-size: 0.9rem; background: #0d1117; color: #c9d1d9; border-color: var(--border-primary) !important;">Ready to execute...</pre>
                         </div>
+                    </div>
+                </section>
+
+                <!-- === TAB: MODULES === -->
+                <section id="modules-content" class="tab-content">
+                    <div class="card mb-4 border-0 shadow-sm" style="border-radius: 1rem;">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 border-bottom" style="border-color: var(--border-primary) !important;">
+                                <div>
+                                    <h3 class="mb-1 fw-bold"><i class="bi bi-puzzle-fill text-primary me-2"></i>Módulos del Sistema</h3>
+                                    <p class="text-muted small mb-0">Activa o desactiva funcionalidades del sitio. Los cambios se aplican en el próximo refresco del visitante.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="modulesLoader" class="text-center py-5" style="display: none;">
+                        <div class="loader-spinner mb-2 mx-auto"></div>
+                        <div class="text-muted small">Cargando módulos...</div>
+                    </div>
+
+                    <div id="modulesContainer">
+                        <!-- JS-injected cards go here -->
                     </div>
                 </section>
 
@@ -971,6 +1091,44 @@
             </form>
         </div>
     </div>
+    
+    <!-- Com Modal (Comunidad) -->
+    <div class="custom-modal" id="comModal" style="display: none; z-index: 2600;">
+        <div class="modal-card" style="max-width: 600px; width: 100%; max-height: 95vh; overflow-y: auto;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold mb-0" id="comModalTitle"><i class="bi bi-chat-dots-fill text-primary me-2"></i> Nueva Publicación</h3>
+                <button type="button" class="btn-close" style="filter: invert(var(--bs-body-theme-invert));" onclick="DashboardCom.closeModal()"></button>
+            </div>
+            <form id="comForm">
+                <input type="hidden" id="comId">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Título <span class="text-danger">*</span></label>
+                    <input type="text" id="comTitle" class="form-control" required placeholder="Ej. Noticia importante de la comunidad">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descripción <span class="text-danger">*</span></label>
+                    <textarea id="comDescription" class="form-control" rows="4" required placeholder="Contenido de la publicación..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Imagen (Opcional)</label>
+                    <input type="file" id="comImage" class="form-control" accept="image/*">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Video (Opcional)</label>
+                    <input type="file" id="comVideo" class="form-control" accept="video/*">
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-4 border-top" style="border-color: var(--border-primary) !important;">
+                    <button type="button" class="btn btn-outline" onclick="DashboardCom.closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4" id="btnSaveCom"><i class="bi bi-save me-2"></i> Guardar Publicación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Notification Container -->
     <div aria-live="polite" aria-atomic="true" class="position-relative">
         <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 3000;">
@@ -985,7 +1143,6 @@
         </div>
     </div>
 
-    <!-- Modularized Logic -->
     <script src="/js/dashboard-app.js"></script>
     <script src="/js/dashboard-stats.js"></script>
     <script src="/js/dashboard-news.js"></script>
@@ -993,6 +1150,9 @@
     <script src="/js/dashboard-users.js"></script>
     <script src="/js/dashboard-api-docs.js"></script>
     <script src="/js/dashboard-ads.js"></script>
+    <script src="/js/dashboard-com.js"></script>
+    <script src="/js/dashboard-comments.js"></script>
+    <script src="/js/dashboard-modules.js"></script>
     <script src="/js/maintenance.js"></script>
 
 </body>

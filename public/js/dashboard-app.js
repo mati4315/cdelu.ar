@@ -123,6 +123,9 @@ const DashboardApp = {
         if(hash === 'users' && window.DashboardUsers) DashboardUsers.load();
         if(hash === 'api-docs' && window.DashboardApiDocs) DashboardApiDocs.load();
         if(hash === 'ads' && window.DashboardAds) DashboardAds.load();
+        if(hash === 'com' && window.DashboardCom) DashboardCom.load();
+        if(hash === 'comments' && window.DashboardComments) DashboardComments.load();
+        if(hash === 'modules' && window.DashboardModules) DashboardModules.load();
     },
 
     async checkAuth() {
