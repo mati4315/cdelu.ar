@@ -69,6 +69,7 @@ async function createNews(input, userId) {
     descripcion: input.descripcion,
     resumen,
     image_url: input.image_url ?? null,
+    image_thumbnail_url: input.image_thumbnail_url ?? null,
     original_url: input.original_url ?? null,
     is_oficial: isOficial,
     created_by: userId,
@@ -95,6 +96,7 @@ async function updateNews(id, input, currentUser) {
     descripcion: input.descripcion ?? existing.descripcion,
     resumen,
     image_url: input.image_url ?? existing.image_url,
+    image_thumbnail_url: input.image_thumbnail_url ?? existing.image_thumbnail_url,
     original_url: input.original_url ?? existing.original_url,
     is_oficial: input.is_oficial ?? existing.is_oficial,
   });

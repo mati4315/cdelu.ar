@@ -63,12 +63,12 @@ async function fetchNewsById(id) {
  * @returns {Promise<number>}
  */
 async function insertNews(data) {
-  const { titulo, descripcion, resumen, image_url, original_url, is_oficial, created_by } = data;
+  const { titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, created_by } = data;
   const [result] = await pool.query(
     `INSERT INTO news (
-       titulo, descripcion, resumen, image_url, original_url, is_oficial, created_by
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [titulo, descripcion, resumen, image_url, original_url, is_oficial, created_by]
+       titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, created_by
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, created_by]
   );
   return result.insertId;
 }
@@ -79,18 +79,19 @@ async function insertNews(data) {
  * @param {object} data
  */
 async function updateNewsById(id, data) {
-  const { titulo, descripcion, resumen, image_url, original_url, is_oficial } = data;
+  const { titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial } = data;
   await pool.query(
     `UPDATE news SET 
        titulo = ?, 
        descripcion = ?, 
        resumen = ?,
        image_url = ?, 
+       image_thumbnail_url = ?,
        original_url = ?, 
        is_oficial = ?,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
-    [titulo, descripcion, resumen, image_url, original_url, is_oficial, id]
+    [titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, id]
   );
 }
 

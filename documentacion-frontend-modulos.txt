@@ -1,0 +1,103 @@
+====================================================
+  DOCUMENTACIÓN: SISTEMA DE MÓDULOS
+  Para el Desarrollador Frontend
+====================================================
+
+## ¿Qué es este sistema?
+El backend ahora tiene una tabla `system_modules` en la base de datos que guarda si cada 
+módulo está activo o no. Desde el panel de administración, el admin puede activar/desactivar 
+módulos con un toggle. El frontend debe consultar esta configuración al cargar cada página.
+
+----------------------------------------------------
+## PASO 1: Incluir el script en cada página HTML
+----------------------------------------------------
+Agrega este tag ANTES de cualquier otro script de funcionalidades:
+
+  <script src="/js/app-config.js"></script>
+
+Ejemplo en lottery.html, index.html, comunidad.html, etc.:
+  <head>
+    ...
+    <script src="/js/app-config.js"></script>  ← PRIMERO
+    <script src="/js/ads.js"></script>          ← DESPUÉS, verifica window.SiteModules.ads
+    <script src="/js/lottery.js"></script>
+  </head>
+
+----------------------------------------------------
+## PASO 2: Verificar si el módulo está habilitado
+----------------------------------------------------
+En cada script de funcionalidad, envolvé la inicialización con una comprobación:
+
+  // ads.js
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.SiteModules || window.SiteModules.ads === false) {
+      console.log('[Ads] Módulo deshabilitado, no se carga.');
+      return; // ← Salir sin inicializar
+    }
+    // ... inicialización normal del módulo de ads
+  });
+
+  // lottery.js
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.SiteModules || window.SiteModules.lotteries === false) {
+      // Ocultar sección de sorteos del menú
+      document.getElementById('lottery-section')?.remove();
+      return;
+    }
+    // ... inicializar sorteos
+  });
+
+----------------------------------------------------
+## PASO 3: Módulos disponibles y sus keys
+----------------------------------------------------
+| Key         | Descripción                              |
+|-------------|------------------------------------------|
+| ads         | Banners y anuncios publicitarios         |
+| lotteries   | Sorteos y tickets                        |
+| surveys     | Encuestas y votaciones                   |
+| facebook    | Widget / login con Facebook              |
+| community   | Feed y publicaciones de la comunidad     |
+
+Ejemplo de respuesta de la API:
+  {
+    "success": true,
+    "modules": {
+      "ads": true,
+      "lotteries": false,
+      "surveys": true,
+      "facebook": true,
+      "community": true
+    }
+  }
+
+----------------------------------------------------
+## API REFERENCE (solo si necesitás acceso directo)
+----------------------------------------------------
+
+### Obtener estado de módulos (PÚBLICO, sin token)
+  GET /api/v1/modules/config
+  Headers: (ninguno requerido)
+  Respuesta: { success: true, modules: { ads: bool, lotteries: bool, ... } }
+  Cache: 5 minutos (Cache-Control: public, max-age=300)
+
+### Listar módulos con detalle (ADMIN)
+  GET /api/v1/admin/modules
+  Headers: Authorization: Bearer <TOKEN>
+  Respuesta: { success: true, data: [ { module_name, display_name, description, enabled, updated_at }, ... ] }
+
+### Activar o desactivar un módulo (ADMIN)
+  PUT /api/v1/admin/modules/:nombre
+  Headers: Authorization: Bearer <TOKEN>, Content-Type: application/json
+  Body: { "enabled": true }  ← o false para desactivar
+  Respuesta: { success: true, message: "Módulo activado correctamente" }
+  Códigos: 200 OK, 400 Bad Request, 404 Not Found
+
+----------------------------------------------------
+## NOTA SOBRE CACHÉ
+----------------------------------------------------
+window.SiteModules se guarda en localStorage por 5 minutos para evitar 
+múltiples llamadas al backend. Para forzar recarga inmediata en desarrollo:
+  localStorage.removeItem('site_modules_config');
+  location.reload();
+
+====================================================

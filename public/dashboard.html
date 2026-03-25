@@ -823,13 +823,17 @@
                         <label class="form-label">Contenido (HTML permitido)</label>
                         <textarea id="newsContent" class="form-control" rows="5" required></textarea>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">URL Imagen (Opcional)</label>
-                        <input type="url" id="newsImgUrl" class="form-control">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">URL Imagen Portada</label>
+                        <input type="url" id="newsImgUrl" class="form-control" placeholder="https://...">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label">URL Miniatura (Thumbnail)</label>
+                        <input type="url" id="newsImgThumbUrl" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="col-md-6 col-lg-4">
                         <label class="form-label">URL Original (Opcional)</label>
-                        <input type="url" id="newsOriginalUrl" class="form-control">
+                        <input type="url" id="newsOriginalUrl" class="form-control" placeholder="https://...">
                     </div>
                 </div>
                 <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top" style="border-color: var(--border-primary) !important;">

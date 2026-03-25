@@ -5,7 +5,10 @@ const config = require('../config/default');
 const parser = new Parser({
     customFields: {
         item: [
-            'content:encoded',
+            ['content:encoded', 'contentEncoded'],
+            ['media:content', 'mediaContent'],
+            ['media:thumbnail', 'mediaThumbnail'],
+            ['webfeeds:featuredImage', 'featuredImage'],
             'description',
             'enclosure'
         ]
@@ -107,18 +110,34 @@ function generateSimpleSummary(content) {
  * @param {Object} newsItem Item de noticia del RSS
  * @returns {string|null} URL de la imagen o null
  */
-function extractImageUrl(newsItem) {
-    // 1) Usar enclosure si está disponible
-    if (newsItem.enclosure && newsItem.enclosure.url) {
-        return newsItem.enclosure.url;
+/**
+ * Extrae la URL de la imagen de la noticia con estrategia multietapa
+ */
+async function extractImageUrl(newsItem) {
+    // 1) Enclosure
+    if (newsItem.enclosure && newsItem.enclosure.url) return newsItem.enclosure.url;
+    
+    // 2) Otros campos comunes
+    const media = newsItem.mediaContent || newsItem.mediaThumbnail || newsItem.featuredImage;
+    if (media) {
+        const url = Array.isArray(media) ? (media[0].url || (media[0].$ ? media[0].$.url : null)) : (media.url || (media.$ ? media.$.url : media));
+        if (typeof url === 'string') return url;
     }
-    
-    // 2) Buscar la primera etiqueta img en content:encoded o description
-    const imgRegex = /<img[^>]+src=['"]([^'"]+\.(?:png|jpe?g|gif|webp)(?:\?[^'"]*)?)['"]/i;
-    const htmlToSearch = newsItem['content:encoded'] || newsItem.content || newsItem.description;
-    const match = htmlToSearch.match(imgRegex);
-    
-    return match ? match[1] : null;
+
+    // 3) Buscar en el HTML del contenido
+    const htmlToSearch = newsItem['content:encoded'] || newsItem.content || newsItem.description || '';
+    const imgMatch = htmlToSearch.match(/<img[^>]+src=['"]([^'"]+\.(?:png|jpe?g|gif|webp)(?:\?[^'"]*)?)['"]/i);
+    if (imgMatch && imgMatch[1]) return imgMatch[1];
+
+    try {
+        // 4) Scraping básico (opcional en simple, pero pongámoslo)
+        const axios = require('axios');
+        const res = await axios.get(newsItem.link, { timeout: 3000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const ogMatch = res.data.match(/<meta[^>]+property=['"]og:image['"][^>]+content=['"]([^'"]+)['"]/i);
+        if (ogMatch) return ogMatch[1];
+    } catch (e) {}
+
+    return null;
 }
 
 async function importNewsSimple() {
@@ -174,7 +193,7 @@ async function importNewsSimple() {
             console.log('Resumen generado:', generatedSummary.substring(0, 100) + '...');
             
             // Extraer URL de imagen
-            const imageUrl = extractImageUrl(newsItem);
+            const imageUrl = await extractImageUrl(newsItem);
             console.log('URL de imagen:', imageUrl);
             
             // Insertar la nueva noticia

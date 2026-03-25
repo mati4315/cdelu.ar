@@ -193,6 +193,7 @@ const DashboardNews = {
         document.getElementById('newsContent').value = news ? (news.descripcion || news.content) : '';
         document.getElementById('newsCategory').value = news ? news.category : 'General';
         document.getElementById('newsImgUrl').value = news && news.image_url ? news.image_url : '';
+        document.getElementById('newsImgThumbUrl').value = news && news.image_thumbnail_url ? news.image_thumbnail_url : '';
         document.getElementById('newsOriginalUrl').value = news && news.original_url ? news.original_url : '';
         
         // Reset RSS Select
@@ -233,6 +234,7 @@ const DashboardNews = {
             descripcion: document.getElementById('newsContent').value,
             category: document.getElementById('newsCategory').value,
             image_url: document.getElementById('newsImgUrl').value || null,
+            image_thumbnail_url: document.getElementById('newsImgThumbUrl').value || null,
             original_url: document.getElementById('newsOriginalUrl').value || null,
             is_oficial: true
         };
@@ -318,6 +320,7 @@ const DashboardNews = {
         document.getElementById('newsTitle').value = item.title || '';
         document.getElementById('newsContent').value = item.description || '';
         document.getElementById('newsImgUrl').value = item.image_url || '';
+        document.getElementById('newsImgThumbUrl').value = item.image_thumbnail_url || '';
         document.getElementById('newsOriginalUrl').value = item.original_url || '';
     },
 
