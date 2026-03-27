@@ -52,29 +52,31 @@ async function getNewsById(id) {
 
 async function createNews(input, userId) {
   const isOficial = Boolean(input.is_oficial);
-  let resumen = null;
   let tituloFinal = input.titulo;
 
-  if (isOficial) {
+  // Si es oficial, podríamos generar un título con IA (opcional)
+  if (isOficial && !tituloFinal) {
     try {
-      resumen = await generateSummary(input.descripcion);
       tituloFinal = await generateTitle(input.descripcion);
     } catch (err) {
-      // Continuar sin interrumpir creación si IA falla
+      // Continuar sin interrumpir si IA falla
     }
   }
 
-  const insertId = await repo.insertNews({
+  const insertData = {
     titulo: tituloFinal,
     descripcion: input.descripcion,
-    resumen,
     image_url: input.image_url ?? null,
     image_thumbnail_url: input.image_thumbnail_url ?? null,
     original_url: input.original_url ?? null,
     is_oficial: isOficial,
     created_by: userId,
-  });
+    published_at: input.published_at ? new Date(input.published_at) : new Date(),
+    diario: input.diario ?? null,
+    categoria: input.categoria ?? null,
+  };
 
+  const insertId = await repo.insertNews(insertData);
   return await repo.fetchNewsById(insertId);
 }
 
@@ -82,23 +84,15 @@ async function updateNews(id, input, currentUser) {
   const existing = await repo.fetchNewsById(id);
   if (!existing) return null;
 
-  let resumen = existing.resumen;
-  if (input.is_oficial && input.descripcion && input.descripcion !== existing.descripcion) {
-    try {
-      resumen = await generateSummary(input.descripcion);
-    } catch (err) {
-      // Mantener resumen existente si IA falla
-    }
-  }
-
   await repo.updateNewsById(id, {
     titulo: input.titulo ?? existing.titulo,
     descripcion: input.descripcion ?? existing.descripcion,
-    resumen,
     image_url: input.image_url ?? existing.image_url,
     image_thumbnail_url: input.image_thumbnail_url ?? existing.image_thumbnail_url,
     original_url: input.original_url ?? existing.original_url,
     is_oficial: input.is_oficial ?? existing.is_oficial,
+    diario: input.diario ?? existing.diario,
+    categoria: input.categoria ?? existing.categoria,
   });
 
   return await repo.fetchNewsById(id);

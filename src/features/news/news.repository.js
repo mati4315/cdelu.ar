@@ -57,18 +57,24 @@ async function fetchNewsById(id) {
   return rows.length > 0 ? rows[0] : null;
 }
 
-/**
- * Inserta una noticia y devuelve el ID generado.
- * @param {object} data
- * @returns {Promise<number>}
- */
 async function insertNews(data) {
-  const { titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, created_by } = data;
+  const { 
+    titulo, descripcion, image_url, image_thumbnail_url, 
+    original_url, is_oficial, created_by, published_at,
+    diario, categoria 
+  } = data;
+
   const [result] = await pool.query(
     `INSERT INTO news (
-       titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, created_by
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, created_by]
+       titulo, descripcion, image_url, image_thumbnail_url, 
+       original_url, is_oficial, created_by, published_at,
+       diario, categoria
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      titulo, descripcion, image_url || null, image_thumbnail_url || null,
+      original_url || null, is_oficial ? 1 : 0, created_by, published_at || new Date(),
+      diario || null, categoria || null
+    ]
   );
   return result.insertId;
 }
@@ -79,19 +85,27 @@ async function insertNews(data) {
  * @param {object} data
  */
 async function updateNewsById(id, data) {
-  const { titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial } = data;
+  const { 
+    titulo, descripcion, image_url, image_thumbnail_url, 
+    original_url, is_oficial, diario, categoria 
+  } = data;
+  
   await pool.query(
     `UPDATE news SET 
        titulo = ?, 
        descripcion = ?, 
-       resumen = ?,
        image_url = ?, 
        image_thumbnail_url = ?,
        original_url = ?, 
        is_oficial = ?,
+       diario = ?,
+       categoria = ?,
        updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
-    [titulo, descripcion, resumen, image_url, image_thumbnail_url, original_url, is_oficial, id]
+    [
+      titulo, descripcion, image_url, image_thumbnail_url, 
+      original_url, is_oficial ? 1 : 0, diario, categoria, id
+    ]
   );
 }
 

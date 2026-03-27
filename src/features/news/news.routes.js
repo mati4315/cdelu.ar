@@ -2,7 +2,7 @@
 
 // Rutas de News en estilo API v1, reutilizando paths actuales para no romper el frontend
 
-const { authenticate, authorize } = require('../../middlewares/auth');
+const { authenticate, authorize, authenticateApiKey } = require('../../middlewares/auth');
 const ctrl = require('./news.controller');
 
 /**
@@ -61,6 +61,29 @@ async function newsRoutes(fastify) {
       },
     },
   }, ctrl.createNews);
+
+  // POST /api/v1/news/external
+  fastify.post('/api/v1/news/external', {
+    onRequest: [authenticateApiKey],
+    schema: {
+      tags: ['Noticias'],
+      summary: 'Crear nueva noticia desde fuente externa (WordPress, etc)',
+      description: 'Endpoint para inyección automática de contenido. Recibe datos mínimos y crea automáticamente como noticia oficial. Campos opcionales permitidos pero ignorados.',
+      security: [{ apiKeyAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['titulo'],
+        additionalProperties: true, // Permitir campos de WordPress sin validar cada uno
+        properties: {
+          titulo: { type: 'string', minLength: 1, maxLength: 200, description: 'Título de la noticia (REQUERIDO)' },
+          descripcion: { type: 'string', nullable: true, description: 'Contenido principal (opcional si se usa titulo como fallback)' },
+          image_url: { type: 'string', nullable: true, description: 'URL de imagen (opcional)' },
+          original_url: { type: 'string', nullable: true, description: 'URL original de WordPress (opcional)' },
+          custom_fields: { type: 'object', nullable: true, description: 'Campos personalizados de WordPress' }
+        },
+      },
+    },
+  }, ctrl.createExternalNews);
 
   // PUT /api/v1/news/:id
   fastify.put('/api/v1/news/:id', {

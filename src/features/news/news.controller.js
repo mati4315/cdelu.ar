@@ -41,6 +41,34 @@ async function createNews(request, reply) {
   }
 }
 
+async function createExternalNews(request, reply) {
+  try {
+    const config = require('../../config/default');
+    
+    const body = request.body || {};
+    const customFields = body.custom_fields || {};
+
+    // Mapeo solicitado por el usuario desde custom_fields de WordPress
+    const enrichedBody = {
+      titulo: body.titulo,
+      descripcion: body.descripcion || body.titulo || 'Sin descripción',
+      image_url: customFields.img?.trim() || body.image_url || null,
+      image_thumbnail_url: customFields.img_miniatura?.trim() || body.image_thumbnail_url || null,
+      original_url: body.original_url || customFields.link_post || customFields.original_link || null,
+      diario: customFields.diario || null,
+      categoria: customFields.categoria || null,
+      is_oficial: body.is_oficial !== undefined ? Boolean(body.is_oficial) : config.wordpress.forceOficial,
+      published_at: body.publish_date || new Date(),
+    };
+    
+    const created = await service.createNews(enrichedBody, config.wordpress.userId);
+    return reply.status(201).send({ success: true, data: created });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({ error: 'Error al crear la noticia externa' });
+  }
+}
+
 async function updateNews(request, reply) {
   try {
     const updated = await service.updateNews(Number(request.params.id), request.body, request.user);
@@ -205,6 +233,7 @@ module.exports = {
   getNews,
   getNewsById,
   createNews,
+  createExternalNews,
   updateNews,
   deleteNews,
   likeNews,
