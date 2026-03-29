@@ -36,10 +36,11 @@ async function newsRoutes(fastify, options) {
                   id: { type: 'integer' },
                   titulo: { type: 'string' },
                   descripcion: { type: 'string' },
-                  resumen: { type: 'string', nullable: true },
                   image_url: { type: 'string', nullable: true },
+                  image_thumbnail_url: { type: 'string', nullable: true },
+                  diario: { type: 'string', nullable: true },
+                  categoria: { type: 'string', nullable: true },
                   original_url: { type: 'string', nullable: true },
-                  published_at: { type: 'string', format: 'date-time', nullable: true },
                   is_oficial: { type: 'boolean' },
                   created_by: { type: 'integer', nullable: true },
                   created_at: { type: 'string', format: 'date-time' },
@@ -86,15 +87,18 @@ async function newsRoutes(fastify, options) {
             id: { type: 'integer' },
             titulo: { type: 'string' },
             descripcion: { type: 'string' },
-            resumen: { type: 'string', nullable: true },
             image_url: { type: 'string', nullable: true },
+            image_thumbnail_url: { type: 'string', nullable: true },
+            diario: { type: 'string', nullable: true },
+            categoria: { type: 'string', nullable: true },
             original_url: { type: 'string', nullable: true },
-            published_at: { type: 'string', format: 'date-time', nullable: true },
             is_oficial: { type: 'boolean' },
             created_by: { type: 'integer', nullable: true },
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
-            autor: { type: 'string', nullable: true }
+            autor: { type: 'string', nullable: true },
+            likes_count: { type: 'integer' },
+            comments_count: { type: 'integer' }
           }
         },
         404: {
@@ -123,6 +127,9 @@ async function newsRoutes(fastify, options) {
           titulo: { type: 'string', minLength: 1, maxLength: 200, description: 'Título de la noticia' },
           descripcion: { type: 'string', minLength: 1, maxLength: 10000, description: 'Contenido completo de la noticia' },
           image_url: { type: 'string', format: 'uri', nullable: true, description: 'URL de la imagen principal' },
+          image_thumbnail_url: { type: 'string', format: 'uri', nullable: true, description: 'URL de la imagen miniatura optimizada' },
+          diario: { type: 'string', maxLength: 255, nullable: true, description: 'Nombre del medio de origen' },
+          categoria: { type: 'string', maxLength: 100, nullable: true, description: 'Categoría de la noticia' },
           original_url: { type: 'string', format: 'uri', nullable: true, description: 'URL de la fuente original' },
           is_oficial: { type: 'boolean', default: true, description: 'Indica si es una noticia oficial (genera contenido con IA)' }
         }
@@ -135,15 +142,18 @@ async function newsRoutes(fastify, options) {
             id: { type: 'integer' },
             titulo: { type: 'string' },
             descripcion: { type: 'string' },
-            resumen: { type: 'string', nullable: true },
             image_url: { type: 'string', nullable: true },
+            image_thumbnail_url: { type: 'string', nullable: true },
+            diario: { type: 'string', nullable: true },
+            categoria: { type: 'string', nullable: true },
             original_url: { type: 'string', nullable: true },
-            published_at: { type: 'string', format: 'date-time', nullable: true },
             is_oficial: { type: 'boolean' },
             created_by: { type: 'integer' },
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
-            autor: { type: 'string' }
+            autor: { type: 'string' },
+            likes_count: { type: 'integer' },
+            comments_count: { type: 'integer' }
           }
         },
         400: {
@@ -193,6 +203,9 @@ async function newsRoutes(fastify, options) {
           titulo: { type: 'string', minLength: 1, maxLength: 200 },
           descripcion: { type: 'string', minLength: 1, maxLength: 10000 },
           image_url: { type: 'string', format: 'uri', nullable: true },
+          image_thumbnail_url: { type: 'string', format: 'uri', nullable: true },
+          diario: { type: 'string', maxLength: 255, nullable: true },
+          categoria: { type: 'string', maxLength: 100, nullable: true },
           original_url: { type: 'string', format: 'uri', nullable: true },
           is_oficial: { type: 'boolean' }
         }
@@ -205,15 +218,18 @@ async function newsRoutes(fastify, options) {
             id: { type: 'integer' },
             titulo: { type: 'string' },
             descripcion: { type: 'string' },
-            resumen: { type: 'string', nullable: true },
             image_url: { type: 'string', nullable: true },
+            image_thumbnail_url: { type: 'string', nullable: true },
+            diario: { type: 'string', nullable: true },
+            categoria: { type: 'string', nullable: true },
             original_url: { type: 'string', nullable: true },
-            published_at: { type: 'string', format: 'date-time', nullable: true },
             is_oficial: { type: 'boolean' },
             created_by: { type: 'integer' },
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
-            autor: { type: 'string' }
+            autor: { type: 'string' },
+            likes_count: { type: 'integer' },
+            comments_count: { type: 'integer' }
           }
         },
         404: {

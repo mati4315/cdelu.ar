@@ -34,7 +34,18 @@ async function getNews(request, reply) {
     // Obtener noticias con información de likes y comentarios
     const [news] = await pool.query(`
       SELECT 
-        n.*,
+        n.id,
+        n.titulo,
+        n.descripcion,
+        n.image_url,
+        n.image_thumbnail_url,
+        n.diario,
+        n.categoria,
+        n.original_url,
+        n.is_oficial,
+        n.created_by,
+        n.created_at,
+        n.updated_at,
         u.nombre as autor,
         COUNT(DISTINCT l.id) as likes_count,
         COUNT(DISTINCT c.id) as comments_count
@@ -75,10 +86,28 @@ async function getNewsById(request, reply) {
   try {
     const { id } = request.params;
     const [news] = await pool.query(
-      `SELECT n.*, u.nombre as autor 
+      `SELECT 
+        n.id,
+        n.titulo,
+        n.descripcion,
+        n.image_url,
+        n.image_thumbnail_url,
+        n.diario,
+        n.categoria,
+        n.original_url,
+        n.is_oficial,
+        n.created_by,
+        n.created_at,
+        n.updated_at,
+        u.nombre as autor,
+        COUNT(DISTINCT l.id) as likes_count,
+        COUNT(DISTINCT c.id) as comments_count
        FROM news n 
-       LEFT JOIN users u ON n.created_by = u.id 
-       WHERE n.id = ?`,
+       LEFT JOIN users u ON n.created_by = u.id
+       LEFT JOIN likes l ON n.id = l.news_id
+       LEFT JOIN comments c ON n.id = c.news_id
+       WHERE n.id = ?
+       GROUP BY n.id`,
       [id]
     );
 
@@ -100,16 +129,14 @@ async function getNewsById(request, reply) {
  */
 async function createNews(request, reply) {
   try {
-    const { titulo, descripcion, image_url, original_url, is_oficial } = request.body;
+    const { titulo, descripcion, image_url, image_thumbnail_url, diario, categoria, original_url, is_oficial } = request.body;
     const userId = request.user.id;
 
-    // Generar resumen y título con IA si es una noticia oficial
-    let resumen = null;
+    // Generar título con IA si es una noticia oficial
     let tituloFinal = titulo;
 
     if (is_oficial) {
       try {
-        resumen = await generateSummary(descripcion);
         tituloFinal = await generateTitle(descripcion);
       } catch (error) {
         console.error('Error al generar contenido con IA:', error);
@@ -120,18 +147,41 @@ async function createNews(request, reply) {
     const [result] = await pool.query(
       `INSERT INTO news (
         titulo, 
-        descripcion, 
-        resumen,
-        image_url, 
+        descripcion,
+        image_url,
+        image_thumbnail_url,
+        diario,
+        categoria,
         original_url, 
         is_oficial,
         created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [tituloFinal, descripcion, resumen, image_url, original_url, is_oficial, userId]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tituloFinal, descripcion, image_url, image_thumbnail_url, diario, categoria, original_url, is_oficial, userId]
     );
 
     const [news] = await pool.query(
-      'SELECT n.*, u.nombre as autor FROM news n LEFT JOIN users u ON n.created_by = u.id WHERE n.id = ?',
+      `SELECT 
+        n.id,
+        n.titulo,
+        n.descripcion,
+        n.image_url,
+        n.image_thumbnail_url,
+        n.diario,
+        n.categoria,
+        n.original_url,
+        n.is_oficial,
+        n.created_by,
+        n.created_at,
+        n.updated_at,
+        u.nombre as autor,
+        COUNT(DISTINCT l.id) as likes_count,
+        COUNT(DISTINCT c.id) as comments_count
+       FROM news n 
+       LEFT JOIN users u ON n.created_by = u.id
+       LEFT JOIN likes l ON n.id = l.news_id
+       LEFT JOIN comments c ON n.id = c.news_id
+       WHERE n.id = ?
+       GROUP BY n.id`,
       [result.insertId]
     );
 
@@ -150,7 +200,7 @@ async function createNews(request, reply) {
 async function updateNews(request, reply) {
   try {
     const { id } = request.params;
-    const { titulo, descripcion, image_url, original_url, is_oficial } = request.body;
+    const { titulo, descripcion, image_url, image_thumbnail_url, diario, categoria, original_url, is_oficial } = request.body;
     const userRole = request.user?.role;
     const userId = request.user?.id;
 
@@ -171,32 +221,44 @@ async function updateNews(request, reply) {
       return reply.status(404).send({ error: 'Noticia no encontrada' });
     }
 
-    // Generar nuevo resumen si la descripción cambió y es una noticia oficial
-    let resumen = existingNews[0].resumen;
-    if (is_oficial && descripcion !== existingNews[0].descripcion) {
-      try {
-        resumen = await generateSummary(descripcion);
-      } catch (error) {
-        console.error('Error al generar resumen con IA:', error);
-        // Mantener el resumen existente
-      }
-    }
-
     await pool.query(
       `UPDATE news SET 
         titulo = ?, 
-        descripcion = ?, 
-        resumen = ?,
-        image_url = ?, 
+        descripcion = ?,
+        image_url = ?,
+        image_thumbnail_url = ?,
+        diario = ?,
+        categoria = ?,
         original_url = ?, 
         is_oficial = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?`,
-      [titulo, descripcion, resumen, image_url, original_url, is_oficial, id]
+      [titulo, descripcion, image_url, image_thumbnail_url, diario, categoria, original_url, is_oficial, id]
     );
 
     const [updatedNews] = await pool.query(
-      'SELECT n.*, u.nombre as autor FROM news n LEFT JOIN users u ON n.created_by = u.id WHERE n.id = ?',
+      `SELECT 
+        n.id,
+        n.titulo,
+        n.descripcion,
+        n.image_url,
+        n.image_thumbnail_url,
+        n.diario,
+        n.categoria,
+        n.original_url,
+        n.is_oficial,
+        n.created_by,
+        n.created_at,
+        n.updated_at,
+        u.nombre as autor,
+        COUNT(DISTINCT l.id) as likes_count,
+        COUNT(DISTINCT c.id) as comments_count
+       FROM news n 
+       LEFT JOIN users u ON n.created_by = u.id
+       LEFT JOIN likes l ON n.id = l.news_id
+       LEFT JOIN comments c ON n.id = c.news_id
+       WHERE n.id = ?
+       GROUP BY n.id`,
       [id]
     );
 
