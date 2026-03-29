@@ -2,6 +2,7 @@ const Parser = require('rss-parser');
 const pool = require('../config/database');
 const axios = require('axios');
 const imageExtractor = require('./imageExtractor');
+const { sanitizeBasicHtml } = require('../utils/sanitizer');
 
 // Configuración mejorada del parser
 const parser = new Parser({
@@ -43,15 +44,13 @@ async function importNewsFromRSS() {
             if (existingNews.length === 0) {
                 // Usamos el extractor modular
                 const imageUrl = await imageExtractor.extractImageFromRSSItem(item);
-                const thumbUrl = await imageExtractor.extractThumbnailOnly(item);
                 
                 const [result] = await connection.query(
-                    `INSERT INTO news (titulo, descripcion, image_url, image_thumbnail_url, original_url, published_at, is_oficial) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    `INSERT INTO news (titulo, descripcion, image_url, original_url, published_at, is_oficial) VALUES (?, ?, ?, ?, ?, ?)`,
                     [
                         item.title,
-                        (item.contentSnippet || item.description || '').substring(0, 5000),
+                        sanitizeBasicHtml(item.contentEncoded || item.description || item.contentSnippet || '').substring(0, 5000),
                         imageUrl,
-                        thumbUrl,
                         item.link,
                         item.pubDate ? new Date(item.pubDate) : new Date(),
                         true
@@ -107,7 +106,7 @@ async function previewRSSNews() {
         for (const item of items) {
             results.push({
                 title: item.title,
-                description: (item.contentSnippet || item.description || '').substring(0, 5000),
+                description: sanitizeBasicHtml(item.contentEncoded || item.description || item.contentSnippet || '').substring(0, 5000),
                 image_url: await imageExtractor.extractImageFromRSSItem(item),
                 image_thumbnail_url: await imageExtractor.extractThumbnailOnly(item),
                 original_url: item.link || '',
@@ -154,7 +153,6 @@ async function importNewsIndexedStream(res, noticiaIndex) {
         
         // Extracción de imagen con el nuevo extractor modular
         const imageUrl = await imageExtractor.extractImageFromRSSItem(item);
-        const thumbUrl = await imageExtractor.extractThumbnailOnly(item);
         
         if (imageUrl) {
             sendEvent('log', 'Imagen portada encontrada con éxito');
@@ -163,12 +161,11 @@ async function importNewsIndexedStream(res, noticiaIndex) {
         }
 
         const [result] = await connection.query(
-            `INSERT INTO news (titulo, descripcion, image_url, image_thumbnail_url, original_url, published_at, is_oficial) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO news (titulo, descripcion, image_url, original_url, published_at, is_oficial) VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 item.title,
-                (item.contentSnippet || item.description || '').substring(0, 5000),
+                sanitizeBasicHtml(item.contentEncoded || item.description || item.contentSnippet || '').substring(0, 5000),
                 imageUrl,
-                thumbUrl,
                 item.link,
                 item.pubDate ? new Date(item.pubDate) : new Date(),
                 true

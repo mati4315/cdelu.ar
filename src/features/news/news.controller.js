@@ -52,11 +52,11 @@ async function createExternalNews(request, reply) {
     const enrichedBody = {
       titulo: body.titulo,
       descripcion: body.descripcion || body.titulo || 'Sin descripción',
-      image_url: customFields.img?.trim() || body.image_url || null,
-      image_thumbnail_url: customFields.img_miniatura?.trim() || body.image_thumbnail_url || null,
+      image_url: body.image_url || customFields.img?.trim() || null,
+      image_thumbnail_url: body.image_thumbnail_url || body.img_miniatura || customFields.img_miniatura?.trim() || null,
       original_url: body.original_url || customFields.link_post || customFields.original_link || null,
-      diario: customFields.diario || null,
-      categoria: customFields.categoria || null,
+      diario: body.diario || customFields.diario || null,
+      categoria: body.categoria || customFields.categoria || null,
       is_oficial: body.is_oficial !== undefined ? Boolean(body.is_oficial) : config.wordpress.forceOficial,
       published_at: body.publish_date || new Date(),
     };

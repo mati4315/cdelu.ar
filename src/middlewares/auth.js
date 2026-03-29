@@ -33,7 +33,22 @@ function authorize(roles) {
   };
 }
 
+/**
+ * Middleware de autenticación por API Key
+ * @param {Object} request - Objeto de solicitud Fastify
+ * @param {Object} reply - Objeto de respuesta Fastify
+ */
+async function authenticateApiKey(request, reply) {
+  const config = require('../config/default');
+  const apiKey = request.headers['x-api-key'] || request.headers['authorization']?.replace('Bearer ', '');
+
+  if (!apiKey || apiKey !== config.apiKey) {
+    return reply.status(401).send({ error: 'API Key inválida' });
+  }
+}
+
 module.exports = {
   authenticate,
-  authorize
+  authorize,
+  authenticateApiKey
 }; 

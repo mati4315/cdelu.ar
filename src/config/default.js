@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 module.exports = {
   port: process.env.PORT || 3001,
   db: {
@@ -9,6 +11,11 @@ module.exports = {
   jwt: {
     secret: process.env.JWT_SECRET || 'tu_secreto_super_seguro',
     expiresIn: process.env.JWT_EXPIRES_IN || '1d'
+  },
+  apiKey: process.env.API_KEY || 'tu_api_key_super_seguro_para_externo',
+  wordpress: {
+    userId: parseInt(process.env.WORDPRESS_USER_ID || '1', 10),
+    forceOficial: process.env.WORDPRESS_FORCE_OFICIAL === 'true',
   },
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY || ''

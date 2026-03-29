@@ -1,6 +1,7 @@
 const Parser = require('rss-parser');
 const pool = require('../config/database');
 const config = require('../config/default');
+const { sanitizeBasicHtml } = require('../utils/sanitizer');
 
 const parser = new Parser({
     customFields: {
@@ -22,22 +23,7 @@ const parser = new Parser({
  */
 function cleanHtmlContent(htmlContent) {
     if (!htmlContent) return '';
-    
-    // Remover etiquetas HTML
-    let cleanText = htmlContent.replace(/<[^>]*>/g, '');
-    
-    // Remover entidades HTML
-    cleanText = cleanText.replace(/&nbsp;/g, ' ');
-    cleanText = cleanText.replace(/&amp;/g, '&');
-    cleanText = cleanText.replace(/&lt;/g, '<');
-    cleanText = cleanText.replace(/&gt;/g, '>');
-    cleanText = cleanText.replace(/&quot;/g, '"');
-    cleanText = cleanText.replace(/&#39;/g, "'");
-    
-    // Limpiar espacios extra y saltos de línea
-    cleanText = cleanText.replace(/\s+/g, ' ').trim();
-    
-    return cleanText;
+    return sanitizeBasicHtml(htmlContent);
 }
 
 /**
@@ -181,7 +167,7 @@ async function importNewsSimple() {
             }
             
             // Obtener el contenido completo
-            const content = newsItem['content:encoded'] || newsItem.content || newsItem.description;
+            const content = newsItem.contentEncoded || newsItem.description || newsItem.content || '';
             console.log('Longitud del contenido:', content.length);
             
             // Generar título simple sin IA

@@ -1,0 +1,1073 @@
+================================================================================
+              MÓDULO DE SINCRONIZACIÓN DE POSTS - DOCUMENTACIÓN TÉCNICA
+                        CdelU Sync Pro v2.0.0
+================================================================================
+
+FECHA: 2026-03-26
+PROPÓSITO: Documentar el funcionamiento del módulo para futuras adaptaciones,
+           cambios de lenguaje de programación, o versiones mobile.
+
+================================================================================
+1. DESCRIPCIÓN GENERAL DEL MÓDULO
+================================================================================
+
+El módulo de sincronización permite que posts publicados en WordPress se envíen
+automáticamente a una API externa (CdelU) para mantener sincronizado un sitio
+web secundario o agregador de noticias.
+
+ARQUITECTURA:
+- Lenguaje: PHP 7.2+
+- Framework: WordPress 5.0+
+- Base de Datos: MySQL/MariaDB
+- API: REST JSON con autenticación por header
+- Protocolo: HTTP/HTTPS
+
+
+================================================================================
+2. FLUJO DE SINCRONIZACIÓN (WORKFLOW)
+================================================================================
+
+FLUJO AUTOMÁTICO (Cuando se publica un post en WordPress):
+────────────────────────────────────────────────────────────────
+
+  1. Usuario crea/edita un post en WordPress
+                    ↓
+  2. WordPress dispara hook "save_post" 
+                    ↓
+  3. Plugin intercepta el evento (sync_on_save)
+                    ↓
+  4. Validaciones:
+     - ¿Es post real o revisión/auto-guardado? → Si no, salir
+     - ¿El tipo de post está habilitado? → Si no, salir
+     - ¿El post está publicado? → Si no, salir
+     - ¿Ya fue sincronizado? → Si sí, salir (excepto si fuerza resync)
+                    ↓
+  5. Preparar datos del post (title, content, image, metadata)
+                    ↓
+  6. Validar formato de datos (URLs válidas, campos requeridos)
+                    ↓
+  7. Enviar POST a API remota con autenticación
+                    ↓
+  8. Recibir respuesta (200/201/202 = éxito, 4xx/5xx = error)
+                    ↓
+  9. Guardar resultado en logs de base de datos
+                    ↓
+  10. Actualizar metadata del post (marcarlo como sincronizado)
+
+
+FLUJO MANUAL (Usuario hace click en "Resincronizar" en editor de post):
+────────────────────────────────────────────────────────────────────
+
+  1. Usuario hace click en botón "Resincronizar"
+                    ↓
+  2. JavaScript envía AJAX call a WordPress backend
+                    ↓
+  3. Plugin recibe petición AJAX (wp_ajax_cdelu_sync_post)
+                    ↓
+  4. Ejecuta mismos pasos que flujo automático (pasos 5-10)
+                    ↓
+  5. Devuelve respuesta al navegador (JSON success/error)
+
+
+================================================================================
+3. ESTRUCTURA DE DATOS ENVIADOS A LA API
+================================================================================
+
+FORMATO JSON ENVIADO EN POST:
+╔════════════════════════════════════════════════════════════════╗
+║ {                                                              ║
+║   "titulo": "Título del Artículo",                            ║
+║   "descripcion": "Contenido del post (puede tener HTML)",     ║
+║   "image_url": "https://ejemplo.com/imagen.jpg",             ║
+║   "original_url": "https://wordpress.com/post/123/",         ║
+║   "is_oficial": true,  // Boolean indicando si es oficial    ║
+║   "category": "Política",                                    ║
+║   "tags": ["tag1", "tag2", "tag3"],                          ║
+║   "author": "Nombre del Autor",                              ║
+║   "publish_date": "2026-03-26 14:30:00"                      ║
+║ }                                                              ║
+╚════════════════════════════════════════════════════════════════╝
+
+CAMPOS DETALLES:
+
+• titulo (string, OBLIGATORIO)
+  - Fuente: post_title de WordPress
+  - Max length: No limitado (pero típicamente < 200 caracteres)
+  - Validación: No debe estar vacío
+
+• descripcion (string, OBLIGATORIO)
+  - Fuente: post_content de WordPress
+  - Procesamiento:
+    * Aplica filtros de WordPress (the_content)
+    * Opcionalmente remueve todas las etiquetas HTML
+    * Trunca a max_length si está configurado (default: 5000 caracteres)
+  - Puede contener: HTML, texto plano, Markdown
+  - Validación: No debe estar vacío
+
+• image_url (string, CONDICIONAL)
+  - Fuente: URL de imagen destacada (featured image) del post
+  - Format: URL completa con protocolo (https://...)
+  - Validación: Si existe, debe ser URL válida (validado con filter_var FILTER_VALIDATE_URL)
+  - Nota: SOLO se envía si el post tiene imagen destacada asignada
+  - Si no existe imagen: el campo NO se incluye en el JSON
+
+• original_url (string, OBLIGATORIO)
+  - Fuente: permalink del post en WordPress
+  - Format: URL completa con protocolo
+  - Validación: Debe ser URL válida
+  - Propósito: Enlace de vuelta al artículo original
+
+• is_oficial (boolean, OBLIGATORIO)
+  - Fuente: post meta "_cdelu_is_oficial"
+  - Valores: true o false
+  - Default: false
+  - Propósito: Indicar si la noticia es oficial o no
+
+• category (string, CONDICIONAL)
+  - Fuente: Primera categoría asignada al post
+  - Default: String vacío si no hay categorías
+  - Formato: Nombre de la categoría (ej: "Política", "Deportes")
+  - Validación: Sin validación específica
+
+• tags (array, CONDICIONAL)
+  - Fuente: Todas las etiquetas (tags) asignadas al post
+  - Formato: Array de strings
+  - Default: Array vacío []
+  - Ejemplo: ["elecciones", "política", "argentina"]
+
+• author (string, OBLIGATORIO)
+  - Fuente: Nombre mostrado del autor del post
+  - Formato: El display_name del usuario de WordPress
+  - Validación: Sin validación específica
+
+• publish_date (datetime string, OBLIGATORIO)
+  - Fuente: post_date del post en WordPress
+  - Formato: "YYYY-MM-DD HH:MM:SS" (formato MySQL)
+  - Timezone: La del servidor WordPress
+  - Esperado por API: En formato ISO 8601 (opcional conversión)
+
+
+EJEMPLO REAL DE POST SINCRONIZADO:
+╔════════════════════════════════════════════════════════════════╗
+║ {                                                              ║
+║   "titulo": "Argentina campeona en eliminatorias",            ║
+║   "descripcion": "<p>Argentina ganó 3-0 en eliminatorias...</" ║
+║   "image_url": "http://localhost/wp-content/uploads/2026/...jpg", ║
+║   "original_url": "http://localhost/index.php?p=123",        ║
+║   "is_oficial": false,                                        ║
+║   "category": "Deportes",                                    ║
+║   "tags": ["fútbol", "argentina", "sudamericana"],           ║
+║   "author": "Juan Pérez",                                    ║
+║   "publish_date": "2026-03-26 14:30:00"                      ║
+║ }                                                              ║
+╚════════════════════════════════════════════════════════════════╝
+
+
+================================================================================
+4. FUNCIONES PRINCIPALES DEL MÓDULO
+================================================================================
+
+ARCHIVO: includes/class-sync.php
+CLASE: CdelU_Sync
+
+┌─ __construct($logger)
+│  Inicializa la clase, configura hooks y propiedades
+│  Input:  Logger object para registrar eventos
+│  Output: Nada (inicializa estructura)
+│  Hace:   Carga config, conecta hooks de WordPress
+│
+
+├─ sync_on_save($post_id, $post, $update)
+│  Hook de WordPress que se ejecuta cuando se guarda un post
+│  Input:  post_id (int), post object, update (bool)
+│  Output: Nada (ejecuta sync_post indirectamente)
+│  Validaciones:
+│    - Excluir revisiones (wp_is_post_revision)
+│    - Excluir auto-guardados (wp_is_post_autosave)
+│    - Verificar tipo de post habilitado
+│    - Permitir solo posts publicados
+│    - Verificar si ya fue sincronizado
+│
+
+├─ sync_post($post_id)
+│  Sincroniza un post específico a la API
+│  Input:  post_id (int)
+│  Output: Boolean (true=éxito, false=error)
+│  Proceso:
+│    1. Validar que API URL y API Key están configuradas
+│    2. Obtener objeto del post
+│    3. Preparar datos (prepare_post_data)
+│    4. Validar datos (validate_post_data)
+│    5. Enviar a API (send_to_api)
+│    6. Si éxito: actualizar metadata del post
+│    7. Registrar en logs
+│    8. Retornar resultado
+│
+
+├─ prepare_post_data($post)
+│  Extrae y formatea los datos del post para enviar a API
+│  Input:  $post object
+│  Output: Array con estructura del JSON a enviar
+│  Proceso:
+│    1. Obtener URL de imagen destacada (si existe)
+│    2. Procesar contenido (aplicar filtros WordPress)
+│    3. Opcionalmente remover tags HTML
+│    4. Limitar longitud de contenido
+│    5. Obtener categoría (primera)
+│    6. Obtener etiquetas (todas)
+│    7. Compilar array con todos los campos
+│    8. Aplicar filtro 'cdelu_sync_post_data' (permite customización)
+│    9. Retornar array formateado
+│
+
+├─ validate_post_data($data)
+│  Valida los datos antes de enviar a API
+│  Input:  Array de datos preparados
+│  Output: Nada (lanza Exception si hay error)
+│  Validaciones:
+│    ✓ Título no está vacío
+│    ✓ Descripción no está vacía
+│    ✓ Si existe image_url, debe ser URL válida
+│    ✓ URL original debe ser URL válida
+│  Método: filter_var con FILTER_VALIDATE_URL
+│
+
+├─ send_to_api($data)
+│  Hace la petición HTTP POST a la API con los datos
+│  Input:  Array de datos a enviar
+│  Output: Array con keys:
+│           - success (boolean)
+│           - code (int HTTP status code)
+│           - data (response body parsed) o message (error string)
+│  Detalles:
+│    - Método: POST
+│    - Auth: Header "X-API-Key" con la API Key configurada
+│    - Content-Type: application/json
+│    - Timeout: Valor configurado (default 30 segundos)
+│    - SSL: Se verifica en localhost (desactiva SSL verify)
+│    - Códigos exitosos: 200, 201, 202
+│    - User-Agent: "CdelU-Sync-Pro/2.0.0"
+│
+
+├─ is_localhost($url)
+│  Detecta si una URL es localhost (para desactivar SSL check)
+│  Input:  URL string
+│  Output: Boolean
+│  Hosts detectados como localhost:
+│    - "localhost"
+│    - "127.0.0.1"
+│    - "::1" (IPv6 loopback)
+│
+
+├─ is_post_type_enabled($post_type)
+│  Verifica si un tipo de post está habilitado para sincronización
+│  Input:  post_type string (ej: "post", "page", "custom_type")
+│  Output: Boolean
+│  Lee: opción WordPress 'cdelu_sync_enabled_types'
+│
+
+└─ ajax_sync_post()
+   Handler para sincronización manual vía AJAX
+   Input:  Nada (lee $_POST: post_id, nonce)
+   Output: JSON response
+   Proceso:
+     1. Verificar seguridad (check_admin_referer)
+     2. Validar post_id
+     3. Ejecutar sync_post
+     4. Retornar resultado como JSON
+
+
+================================================================================
+5. HOOKS DE WORDPRESS UTILIZADOS
+================================================================================
+
+HOOKS QUE USA ESTE MÓDULO:
+
+1. add_action('save_post', array($this, 'sync_on_save'), 20, 3)
+   ├─ Cuándo: Cada vez que se guarda un post
+   ├─ Prioridad: 20 (después de hooks default)
+   ├─ Parámetros: post_id, post_object, is_update
+   └─ Propósito: Interceptar guardado de post para sincronizar
+
+2. add_action('wp_ajax_cdelu_sync_post', array($this, 'ajax_sync_post'))
+   ├─ Cuándo: Cuando se hace AJAX call desde admin
+   ├─ Endpoint: admin-ajax.php?action=cdelu_sync_post
+   └─ Propósito: Permitir sincronización manual desde UI
+
+3. apply_filters('the_content', $post->post_content)
+   ├─ Cuándo: En prepare_post_data
+   ├─ Propósito: Procesar contenido con WordPress filters
+   └─ Devuelve: Contenido procesado (ej: parámetros globales)
+
+4. apply_filters('cdelu_sync_post_data', $data, $post)
+   ├─ Cuándo: Antes de validar y enviar datos
+   ├─ Propósito: Permitir a otros plugins modificar datos
+   ├─ Estructura: apply_filters('cdelu_sync_post_data', $data, $post)
+   └─ Ejemplo: Agregar campos custom internamente
+
+METADATOS DE POST UTILIZADOS:
+
+• _cdelu_synced
+  └─ Indica si el post ya fue sincronizado
+  └─ Valores: "1" (sincronizado) o no existe (no sincronizado)
+
+• _cdelu_sync_time
+  └─ Timestamp de la última sincronización
+  └─ Formato: Formato MySQL datetime
+
+• _cdelu_response_id
+  └─ ID que devolvió la API al crear el post
+  └─ Tipo: String o Int según API
+
+• _cdelu_force_sync
+  └─ Flag temporal para forzar resincronización
+  └─ Valores: "1" cuando se activa, se borra después de usar
+
+• _cdelu_is_oficial
+  └─ Indica si es noticia oficial
+  └─ Valores: "1" (true) o "0" (false)
+
+
+================================================================================
+6. CONFIGURACIÓN REQUERIDA
+================================================================================
+
+OPCIONES DE WORDPRESS (wp_options table):
+
+1. cdelu_sync_api_url
+   ├─ Tipo: String
+   ├─ Ejemplo: "http://localhost:3001/api/v1/news/external"
+   ├─ Requerido: SÍ
+   └─ Validación: Debe ser URL válida
+
+2. cdelu_sync_api_key
+   ├─ Tipo: String
+   ├─ Ejemplo: "35115415"
+   ├─ Requerido: SÍ
+   ├─ Sensible: SÍ (contraseña/API Key)
+   └─ Formato: Acordado con API remota
+
+3. cdelu_sync_enabled_types
+   ├─ Tipo: Array o String (comma-separated)
+   ├─ Ejemplo: ["post", "page", "custom_news"]
+   ├─ Default: ["post"]
+   └─ Propósito: Qué tipos de posts sincronizar
+
+4. cdelu_sync_strip_tags
+   ├─ Tipo: Boolean
+   ├─ Default: false
+   ├─ Propósito: Si true, remueve HTML del contenido
+   └─ Alternativa: Enviar HTML tal cual
+
+5. cdelu_sync_max_length
+   ├─ Tipo: Integer
+   ├─ Default: 5000
+   ├─ Propósito: Truncar descripción si es más larga
+   └─ Enfoque: Evitar posts gigantes
+
+6. cdelu_sync_timeout
+   ├─ Tipo: Integer (segundos)
+   ├─ Default: 30
+   ├─ Propósito: Timeout para conexión a API
+   └─ Rango: Recomendado 10-60 segundos
+
+
+================================================================================
+7. TABLA DE BASE DE DATOS
+================================================================================
+
+TABLA: wp_cdelu_sync_logs
+PROPÓSITO: Registrar todos los eventos de sincronización
+
+ESTRUCTURA:
+
+CREATE TABLE wp_cdelu_sync_logs (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  post_id         BIGINT NOT NULL,          -- ID del post sincronizado
+  level           VARCHAR(20) NOT NULL,     -- Nivel: success, error, warning, info
+  message         TEXT NOT NULL,            -- Mensaje descriptivo del evento
+  response_code   INT,                      -- HTTP response code (200, 201, 401, 400, etc)
+  api_response    LONGTEXT,                 -- Response body JSON de la API
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  
+  KEY idx_post_id (post_id),
+  KEY idx_level (level),
+  KEY idx_created_at (created_at)
+);
+
+CAMPOS EN DETALLE:
+
+• id: Identificador único del log
+• post_id: Referencia al post_id de WordPress
+• level: Categoría del evento
+          ├─ "success" = Sincronización exitosa
+          ├─ "error"   = Error de sincronización
+          ├─ "warning" = Advertencia
+          └─ "info"    = Información adicional
+
+• message: Descripción del evento (ej: "Post sincronizado exitosamente")
+• response_code: Código HTTP recibido de la API
+• api_response: Respuesta completa de la API (JSON stringificado)
+• created_at: Timestamp del evento
+
+EJEMPLOS DE LOGS:
+
+1. Sincronización exitosa:
+   ┌──────────────────────────────────────────────────────────────┐
+   │ post_id: 103                                                 │
+   │ level: success                                               │
+   │ message: "Post sincronizado exitosamente"                   │
+   │ response_code: 201                                           │
+   │ api_response: {"id":5847,"status":"created",...}           │
+   │ created_at: 2026-03-26 22:18:07                            │
+   └──────────────────────────────────────────────────────────────┘
+
+2. Error de validación:
+   ┌──────────────────────────────────────────────────────────────┐
+   │ post_id: 103                                                 │
+   │ level: error                                                 │
+   │ message: "Error al sincronizar: {"error":"..."}"           │
+   │ response_code: 400                                           │
+   │ api_response: {"error":"Error de validación",...}          │
+   │ created_at: 2026-03-26 22:18:07                            │
+   └──────────────────────────────────────────────────────────────┘
+
+3. Advertencia (sin mensaje):
+   ┌──────────────────────────────────────────────────────────────┐
+   │ post_id: 103                                                 │
+   │ level: warning                                               │
+   │ message: "No hay URL de API o API Key configuradas"        │
+   │ response_code: (NULL)                                        │
+   │ api_response: {"status":"error"}                            │
+   │ created_at: 2026-03-26 22:18:07                            │
+   └──────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+8. FLUJO DE VALIDACIÓN DE DATOS
+================================================================================
+
+Antes de enviar cualquier dato a la API, el módulo pasa por varias capas
+de validación:
+
+PASO 1: VALIDACIÓN DE HOOK
+─────────────────────────
+En sync_on_save():
+  ✓ ¿Es revisión (draft, auto-save)? → SALIR
+  ✓ ¿Tipo de post habilitado? → SALIR
+  ✓ ¿Está publicado (post_status='publish')? → SALIR
+  ✓ ¿Ya fue sincronizado? → SALIR (excepto si fuerza resync)
+
+PASO 2: VALIDACIÓN DE CONFIGURACIÓN
+────────────────────────────────────
+En sync_post():
+  ✓ ¿API URL no está vacía?
+  ✓ ¿API Key no está vacía?
+  ✓ ¿Post existe?
+  Si FALLA: Log WARNING/ERROR, retorn false
+
+PASO 3: VALIDACIÓN DE CAMPOS INDIVIDUALES
+──────────────────────────────────────────
+En validate_post_data():
+  ✓ titulo != ""
+  ✓ descripcion != ""
+  ✓ image_url = "" O image_url es URL válida
+  ✓ original_url es URL válida
+  Si FALLA: Lanza Exception, capturada, log ERROR
+
+PASO 4: VALIDACIÓN REMOTA (API)
+────────────────────────────────
+Servidor CdelU valida:
+  ✓ X-API-Key header existe y es válido
+  ✓ JSON bien formado
+  ✓ imagen_url cumple formato "uri" (si existe)
+  ✓ Otros campos según schema del API
+  Si FALLA: HTTP 400/401, contenido almacenado en logs
+
+
+================================================================================
+9. MANEJO DE ERRORES
+================================================================================
+
+TIPOS DE ERRORES Y CÓMO SE MANEJAN:
+
+1. ERROR DE CONEXIÓN (cURL error)
+   ├─ HTTP Code: 0
+   ├─ Mensaje: "Failed to connect to..." o similar
+   ├─ Acción: Log ERROR, no marca como sincronizado
+   ├─ Retry: Manual o en próxima edición del post
+   └─ Causa probable: API offline, firewall, puerto cerrado
+
+2. ERROR DE AUTENTICACIÓN
+   ├─ HTTP Code: 401 Unauthorized
+   ├─ Mensaje: JSON con "error": "Unauthorized"
+   ├─ Acción: Log ERROR, alertar en panel admin
+   ├─ Causa: API Key incorrecta o expirada
+   └─ Solución: Verificar API Key en configuración
+
+3. ERROR DE VALIDACIÓN
+   ├─ HTTP Code: 400 Bad Request
+   ├─ Mensaje: JSON con "error": "Error de validación"
+   ├─ Acción: Log ERROR, mostrar detalles en historial
+   ├─ Causa: Datos enviados no cumplen schema API
+   └─ Solución: Ajustar formato de datos (este caso: image_url)
+
+4. ERROR DE SERVIDOR
+   ├─ HTTP Code: 500, 502, 503, 504
+   ├─ Mensaje: Error interno del servidor remoto
+   ├─ Acción: Log ERROR, sugerir reintentar
+   ├─ Causa: API tiene problema
+   └─ Solución: Esperar, reintentar manualmente
+
+5. ERROR DE CONFIG FALTANTE
+   ├─ HTTP Code: (no se hace request)
+   ├─ Mensaje: "No hay URL de API o API Key configuradas"
+   ├─ Acción: Log WARNING, no sincroniza
+   ├─ Causa: Settings del plugin no configuradas
+   └─ Solución: Completar configuración en admin
+
+
+CÓDIGO DE EJEMPLO (Manejo de excepciones):
+
+try {
+    $data = $this->prepare_post_data($post);
+    $this->validate_post_data($data);
+    $response = $this->send_to_api($data);
+    
+    if ($response['success']) {
+        // Actualizar metadata
+        update_post_meta($post_id, '_cdelu_synced', '1');
+        // Log éxito
+        $this->logger->log('Exitoso', 'success', $post_id, ...);
+    } else {
+        // Log error
+        $this->logger->log('Error: ' . $response['message'], 'error', ...);
+    }
+} catch (Exception $e) {
+    // Log excepción
+    $this->logger->log('Exception: ' . $e->getMessage(), 'error', ...);
+}
+
+
+================================================================================
+10. AUTENTICACIÓN Y SEGURIDAD
+================================================================================
+
+AUTENTICACIÓN CON LA API REMOTA:
+─────────────────────────────────
+
+Método: Header API Key
+Header Name: "X-API-Key"
+Header Value: Valor configurado en WordPress (ej: "35115415")
+
+Ejemplo de request:
+  POST /api/v1/news/external HTTP/1.1
+  Host: localhost:3001
+  Content-Type: application/json
+  X-API-Key: 35115415
+  User-Agent: CdelU-Sync-Pro/2.0.0
+  
+  { datos JSON ... }
+
+VALIDACIÓN EN LADO WORDPRESS:
+──────────────────────────────
+
+1. Todo request requiere estar logueado en WordPress (admin)
+   └─ Para AJAX: check_admin_referer("nonce_value") valida token CSRF
+
+2. Cada usuario debe tener permisos para editar posts
+   └─ Validado por WordPress automáticamente
+
+3. API Key se almacena en wp_options (no debajo de /wp-content)
+   └─ Protegida por permisos de archivo server y DB access
+
+SSL/TLS:
+────────
+
+EN PRODUCCIÓN:
+  └─ sslverify: true (verifica certificado SSL remoto)
+  └─ Recomendación: Usar HTTPS para API
+
+EN LOCALHOST:
+  └─ sslverify: false (permite self-signed certificates)
+  └─ Detectado automáticamente por is_localhost()
+  └─ Nunca en producción
+
+
+================================================================================
+11. CONFIGURACIÓN DEL SERVIDOR (NODEJS/EXPRESS) - REQUERIDO
+================================================================================
+
+El servidor CdelU debe estar configurado de la siguiente manera:
+
+ESTRUCTURA MÍNIMA:
+
+app.js o server.js:
+──────────────────
+
+const express = require('express');
+const app = express();
+const dotenv = require('dotenv');
+
+dotenv.config();  // Cargar variables de .env
+
+// Middleware de autenticación
+const validateApiKey = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'];      // Leer header X-API-Key
+    const validApiKey = process.env.API_KEY;      // Comparar con .env
+    
+    if (!apiKey || apiKey !== validApiKey) {
+        return res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Invalid or missing API Key'
+        });
+    }
+    next();
+};
+
+// Middleware para parsear JSON
+app.use(express.json());
+
+// Endpoint de sincronización
+app.post('/api/v1/news/external', validateApiKey, (req, res) => {
+    try {
+        // req.body contiene el JSON enviado por WordPress
+        const { titulo, descripcion, image_url, category, tags, author, publish_date } = req.body;
+        
+        // Validaciones del servidor
+        if (!titulo || !descripcion) {
+            return res.status(400).json({
+                error: 'Validation error',
+                message: 'titulo and descripcion are required',
+                code: 'VALIDATION_ERROR'
+            });
+        }
+        
+        // Procesar datos: guardar en DB, etc...
+        // ...
+        
+        // Respuesta exitosa
+        res.status(201).json({
+            id: newId,
+            status: 'created',
+            titulo: titulo
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Server error',
+            message: error.message
+        });
+    }
+});
+
+app.listen(3001, () => {
+    console.log('Listening on port 3001');
+});
+
+
+.env file:
+──────────
+
+API_KEY=35115415
+NODE_ENV=development
+PORT=3001
+
+
+================================================================================
+12. CÓMO ADAPTAR PARA OTROS LENGUAJES DE PROGRAMACIÓN
+================================================================================
+
+Si quieres reimplementar este módulo en Java, Python, .NET, JavaScript, etc:
+
+PUNTOS CLAVE A MANTENER:
+
+1. ARQUITECTURA
+   ├─ Hook/Listener en guardado de posts
+   ├─ Validación de configuración
+   ├─ Preparación de datos
+   ├─ Validación de datos
+   ├─ HTTP POST con autenticación
+   └─ Logging de resultados
+
+2. ESTRUCTURA DE DATOS
+   ├─ JSON con campos específicos (titulo, descripcion, etc)
+   ├─ Headers con X-API-Key
+   ├─ Content-Type: application/json
+   └─ Timestamp en formato MySQL
+
+3. FLUJO DE CONTROL
+   ├─ No sincronizar borradores
+   ├─ No sincronizar si ya sincronizó (excepto fuerza resync)
+   ├─ Validar campos requeridos
+   ├─ Reintentar si falla por timeout
+   └─ Registrar todo en base de datos
+
+4. ERRORES CLAVE A MANEJAR
+   ├─ Conexión rechazada
+   ├─ Timeout
+   ├─ 401 Unauthorized
+   ├─ 400 Validation Error
+   ├─ 500 Server Error
+   └─ Campos faltantes
+
+EJEMPLO EN PYTHON (Pseudocódigo):
+
+class CdeluSync:
+    def __init__(self, wordpress_db, logger):
+        self.wordpress_db = wordpress_db
+        self.logger = logger
+        self.api_url = get_option('cdelu_sync_api_url')
+        self.api_key = get_option('cdelu_sync_api_key')
+    
+    def on_post_save(self, post_id, post_data):
+        if self.is_draft(post_data):
+            return
+        if self.already_synced(post_id):
+            return
+        
+        self.sync_post(post_id)
+    
+    def sync_post(self, post_id):
+        post = self.wordpress_db.get_post(post_id)
+        data = self.prepare_data(post)
+        self.validate_data(data)
+        response = self.send_post_request(data)
+        
+        if response.status_code in [200, 201, 202]:
+            self.mark_synced(post_id)
+            self.log('success', 'Post synced', post_id)
+        else:
+            self.log('error', response.text, post_id)
+    
+    def send_post_request(self, data):
+        headers = {
+            'Content-Type': 'application/json',
+            'X-API-Key': self.api_key
+        }
+        return requests.post(self.api_url, json=data, headers=headers)
+
+
+EJEMPLO EN JAVASCRIPT/NODEJS:
+
+class CdeluSync {
+    constructor(wordpressDb, logger) {
+        this.wordpressDb = wordpressDb;
+        this.logger = logger;
+        this.apiUrl = process.env.CDELU_API_URL;
+        this.apiKey = process.env.CDELU_API_KEY;
+    }
+    
+    async syncPost(postId) {
+        const post = await this.wordpressDb.getPost(postId);
+        
+        if (this.isDraft(post)) return;
+        if (await this.alreadySynced(postId)) return;
+        
+        const data = this.prepareData(post);
+        this.validateData(data);
+        
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': this.apiKey
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if ([200, 201, 202].includes(response.status)) {
+                await this.markSynced(postId);
+                this.logger.log('success', 'Post synced', postId);
+            } else {
+                this.logger.log('error', await response.text(), postId);
+            }
+        } catch (error) {
+            this.logger.log('error', error.message, postId);
+        }
+    }
+}
+
+
+================================================================================
+13. INFORMACIÓN PARA ADAPTACIONES MOBILE
+================================================================================
+
+Si quieres sincronizar desde una app mobile (iOS, Android):
+
+CAMBIOS NECESARIOS:
+
+1. API Authentication
+   ├─ Mantener header X-API-Key (igual que desktop)
+   ├─ O añadir header X-Device-Id con UUID del dispositivo
+   ├─ O implementar OAuth2 si es necesario
+   └─ Todo depende de política de seguridad
+
+2. Estructura de Datos
+   ├─ Mantener mismos campos JSON
+   ├─ Agregar campos opcionales:
+   │  ├─ device_id (del dispositivo mobile)
+   │  ├─ app_version (versión de la app)
+   │  └─ is_mobile (boolean: true si viene de mobile)
+   └─ Resto igual a versión desktop
+
+3. Endpoint a Usar
+   ├─ Misma URL: /api/v1/news/external
+   ├─ Mismo método: POST
+   ├─ Mismos headers (más el User-Agent indicando mobile)
+   └─ Ejemplo User-Agent: "CdeluApp-Mobile-iOS/1.0"
+
+4. Configuración en Mobile
+   ├─ API Key almacenada en Keychain (iOS) o Keystore (Android)
+   ├─ API URL almacenada en preferencias/settings
+   ├─ Usuario y contraseña en Secure Storage
+   └─ Logs guardados en archivo local
+
+5. Consideraciones Especiales
+   ├─ Timeout más corto (15 segundos en mobile)
+   ├─ Retry automático si falla conexión
+   ├─ Sincronización en background (si sistema lo permite)
+   ├─ Queue de posts pendientes si no hay conexión
+   └─ Mostrar notificación al usuario cuando se sincronize
+
+ESTRUCTURA JSON EXTENDIDA PARA MOBILE:
+
+{
+  // Campos estándar (igual que desktop)
+  "titulo": "...",
+  "descripcion": "...",
+  "image_url": "...",
+  "original_url": "...",
+  "is_oficial": false,
+  "category": "...",
+  "tags": [...],
+  "author": "...",
+  "publish_date": "...",
+  
+  // Campos adicionales para mobile (opcionales)
+  "device_id": "UUID-12345-67890",
+  "app_version": "1.2.3",
+  "is_mobile": true,
+  "device_os": "iOS",
+  "device_os_version": "14.5",
+  "app_locale": "es-AR"
+}
+
+
+================================================================================
+14. ESTRUCTURA DE DIRECTORIOS DEL PLUGIN
+================================================================================
+
+cdelu-sync-pro/
+├── cdelu-sync-pro.php          # Archivo principal (entry point)
+├── readme.txt                  # Descripción para WordPress.org
+├── funcion-post-wordpress.txt  # Este archivo (documentación)
+│
+├── includes/
+│   ├── class-logger.php        # Sistema de logging
+│   ├── class-sync.php          # Lógica de sincronización
+│   └── class-admin.php         # Interfaz admin
+│
+├── admin/
+│   ├── class-admin.php         # Panel de administración
+│   └── assets/
+│       ├── admin-style.css     # Estilos CSS
+│       └── admin-script.js     # JavaScript admin
+│
+└── config/
+    └── defaults.php            # Configuración por defecto
+
+
+================================================================================
+15. CÓMO HACER CAMBIOS Y MANTENIMIENTO
+================================================================================
+
+CAMBIO: Agregar nuevo campo al JSON enviado
+─────────────────────────────────────────
+
+1. En prepare_post_data() añadir:
+   $data['nuevo_campo'] = get_post_meta($post->ID, '_nuevo_campo', true);
+
+2. En validate_post_data() añadir validación si es obligatorio:
+   if (empty($data['nuevo_campo'])) {
+       throw new Exception('nuevo_campo es requerido');
+   }
+
+3. Informar al servidor CdelU que acepte nuevo_campo
+
+4. En admin/class-admin.php agregar meta box o checkbox
+
+
+CAMBIO: Cambiar URL de API o agregar endpoints múltiples
+──────────────────────────────────────────────────────
+
+1. En constructor de CdelU_Sync:
+   - Leer múltiples URLs de opciones
+   - Agregar lógica para seleccionar endpoint
+
+2. En send_to_api():
+   - Iterar sobre endpoints si hay múltiples
+   - Reintentear en otro endpoint si uno falla
+
+3. En admin config:
+   - Dar opción de múltiples endpoints
+
+
+CAMBIO: Implementar retry automático
+──────────────────────────────────
+
+1. Crear función retry_failed_syncs()
+2. Schedulear con wp_schedule_event() cada X minutos
+3. Buscar posts con _cdelu_sync_failed = true
+4. Reintentar sincronización
+5. Después de N intentos, marcar como failed permanentemente
+
+
+CAMBIO: Agregar soporte para sincronización bidireccional
+──────────────────────────────────────────────────────────
+
+1. Crear nuevo hook: cdelu_receive_post_data()
+2. Endpoint en WordPress: /wp-json/cdelu/v1/sync (REST API)
+3. Validación de API Key en endpoint WordPress
+4. Crear/actualizar post en WordPress desde datos remotos
+5. Sincronizar campos específicos solamente
+
+
+CAMBIO: Mejorar logging (agregar al archivo)
+──────────────────────────────────────────
+
+1. En class-logger.php, agregar método save_to_file():
+   - Guardar logs en wp-content/cdelu-logs/
+   - Rotar archivos (daily, weekly)
+
+2. Agregar opción en admin para:
+   - Habilitar/deshabilitar logging a archivo
+   - Nivel de log (debug, info, warning, error)
+   - Retención de logs (días)
+
+
+================================================================================
+16. REFERENCIAS Y VERSIONES
+================================================================================
+
+VERSIÓN ACTUAL: CdelU Sync Pro v2.0.0
+
+REQUISITOS MÍNIMOS:
+- PHP: 7.2+
+- WordPress: 5.0+
+- MySQL: 5.5+ (InnoDB recomendado)
+- cURL: Habilitado (para HTTP requests)
+
+BIBLIOTECAS UTILIZADAS:
+- WordPress Core API
+- WordPress Hooks System
+- WordPress REST API (opcional, para futuras versiones)
+- cURL (función wp_remote_post de WordPress)
+
+CHANGELOG:
+─────────
+v2.0.0 (2026-03-26):
+  ✓ Primera versión completa
+  ✓ Sincronización automática y manual
+  ✓ Logging en base de datos
+  ✓ Admin panel profesional
+  ✓ Meta box en editor de posts
+  ✓ Soporte para localhost
+  ✓ Configurable por tipo de posts
+  ✓ Historial de eventos
+
+PRÓXIMAS MEJORAS PLANEADAS:
+  □ Soporte para WordPress REST API (v3)
+  □ Sincronización bidireccional
+  □ Webhook para eventos remotos
+  □ CLI commands para sincronización
+  □ Export/Import de configuración
+  □ Multi-idioma interface
+  □ Estadísticas avanzadas
+  □ Rate limiting por API
+  □ Queue system con Cron
+  □ Versión mobile (iOS/Android)
+
+
+================================================================================
+17. DEBUGGING Y TROUBLESHOOTING
+================================================================================
+
+PROBLEMA: Post no se sincroniza automáticamente
+────────────────────────────────────────────
+
+Checklist:
+  1. ¿El post está publicado (status = 'publish')?
+  2. ¿Está habilitado el tipo de post en configuración?
+  3. ¿Hay API URL y API Key configuradas?
+  4. Revisar logs en historial del plugin
+  5. Ejecutar "Test Connection" en admin
+  6. Ver logs de base de datos directamente
+
+Query para verificar:
+  SELECT * FROM wp_cdelu_sync_logs 
+  WHERE post_id = [ID] 
+  ORDER BY created_at DESC LIMIT 10;
+
+
+PROBLEMA: HTTP 401 Unauthorized
+──────────────────────────────
+
+Causas posibles:
+  1. API Key incorrecta en WordPress
+  2. API Key no coincide con server CdelU
+  3. Servidor CdelU no validando API Key
+  4. Header X-API-Key no se envía
+
+Verificaciones:
+  1. Abrir test-cdelu-connection.php
+  2. Ver headers enviados
+  3. Verificar servidor CdelU .env file
+  4. Ejecutar curl manual
+
+
+PROBLEMA: HTTP 400 Validation Error
+────────────────────────────────────
+
+Causa: Datos no cumplen schema del servidor
+
+Revisar en logs:
+  - Campo específico que falla (image_url, etc)
+  - Formato esperado vs. formato enviado
+
+Solución:
+  1. Revisar prepare_post_data()
+  2. Validar formato de arrays (tags, etc)
+  3. Asegurar que URLs sean completas
+
+
+PROBLEMA: Timeout / Connection refused
+──────────────────────────────────────
+
+Causas:
+  1. Servidor CdelU no está corriendo
+  2. Puerto 3001 no es accesible
+  3. Firewall bloqueando
+  4. Timeout muy corto
+
+Revisar:
+  1. ¿Está corriendo servidor? (test-simple.php)
+  2. ¿Puerto está abierto? (check-port-3001.php)
+  3. Aumentar timeout en configuración (en admin)
+  4. Ver si hay error de conexión en logs
+
+
+================================================================================
+FIN DE DOCUMENTACIÓN
+================================================================================
+
+ÚLTIMA ACTUALIZACIÓN: 2026-03-26 22:25:00
+AUTOR: Sistema CdelU Sync Pro
+VERSIÓN DEL DOCUMENTO: 1.0
+
+Para preguntas o actualizaciones, referir a:
+- Código fuente en /includes/class-sync.php
+- Admin UI en /admin/class-admin.php
+- Logs en wp_cdelu_sync_logs table
+
+================================================================================

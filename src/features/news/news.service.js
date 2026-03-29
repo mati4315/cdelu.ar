@@ -5,6 +5,7 @@
 
 const repo = require('./news.repository');
 const { generateSummary, generateTitle } = require('../../services/aiService');
+const { sanitizeBasicHtml } = require('../../utils/sanitizer');
 
 const ALLOWED_SORT_FIELDS = ['titulo', 'created_at', 'likes_count', 'comments_count', 'latest', 'oldest'];
 const ALLOWED_ORDERS = ['asc', 'desc'];
@@ -65,7 +66,7 @@ async function createNews(input, userId) {
 
   const insertData = {
     titulo: tituloFinal,
-    descripcion: input.descripcion,
+    descripcion: sanitizeBasicHtml(input.descripcion),
     image_url: input.image_url ?? null,
     image_thumbnail_url: input.image_thumbnail_url ?? null,
     original_url: input.original_url ?? null,
@@ -86,7 +87,7 @@ async function updateNews(id, input, currentUser) {
 
   await repo.updateNewsById(id, {
     titulo: input.titulo ?? existing.titulo,
-    descripcion: input.descripcion ?? existing.descripcion,
+    descripcion: input.descripcion ? sanitizeBasicHtml(input.descripcion) : existing.descripcion,
     image_url: input.image_url ?? existing.image_url,
     image_thumbnail_url: input.image_thumbnail_url ?? existing.image_thumbnail_url,
     original_url: input.original_url ?? existing.original_url,

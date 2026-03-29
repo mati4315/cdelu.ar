@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const config = require('../config/default');
 const aiService = require('../services/aiService');
 const imageExtractor = require('../services/imageExtractor');
+const { sanitizeBasicHtml } = require('../utils/sanitizer');
 
 const parser = new Parser({
     customFields: {
@@ -51,16 +52,11 @@ async function importLatestNews() {
         // --- EXTRACCIÓN DE IMAGEN (MEJORADA) ---
         console.log('Extrayendo imagen con estrategias avanzadas...');
         const imageUrl = await imageExtractor.extractImageFromRSSItem(latestNews);
-        const thumbUrl = await imageExtractor.extractThumbnailOnly(latestNews);
         
         if (imageUrl) {
-            console.log('Portada principal detectada:', imageUrl);
-        }
-        if (thumbUrl && thumbUrl !== imageUrl) {
-            console.log('Miniatura secundaria detectada:', thumbUrl);
-        }
-        if (!imageUrl && !thumbUrl) {
-            console.log('Aviso: No se pudo detectar ninguna imagen (usando valor nulo).');
+            console.log('Éxito: Imagen de portada detectada:', imageUrl);
+        } else {
+            console.log('Aviso: No se pudo detectar imagen de portada (usando valor nulo).');
         }
 
         // --- PROCESAMIENTO CON IA ---
@@ -74,7 +70,7 @@ async function importLatestNews() {
         } catch (err) {}
 
         console.log('Generando resumen automático...');
-        let summarizedContent = latestNews.contentSnippet || latestNews.description || "Sin descripción disponible.";
+        let summarizedContent = sanitizeBasicHtml(latestNews.contentEncoded || latestNews.description || latestNews.contentSnippet || "Sin descripción disponible.");
         try {
             const aiSummary = await aiService.generateSummary(content);
             if (aiSummary) summarizedContent = aiSummary;
@@ -82,12 +78,11 @@ async function importLatestNews() {
 
         // --- GUARDADO A BASE DE DATOS ---
         const [result] = await pool.query(
-            `INSERT INTO news (titulo, descripcion, image_url, image_thumbnail_url, original_url, published_at, is_oficial, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO news (titulo, descripcion, image_url, original_url, published_at, is_oficial, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 generatedTitle.substring(0, 255), 
                 summarizedContent, 
                 imageUrl, 
-                thumbUrl, 
                 latestNews.link, 
                 latestNews.pubDate ? new Date(latestNews.pubDate) : new Date(), 
                 true, 

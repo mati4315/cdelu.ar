@@ -124,6 +124,12 @@ fastify.register(require('@fastify/swagger'), {
           scheme: 'bearer',
           bearerFormat: 'JWT',
           description: 'Token JWT obtenido tras el login. Formato: Bearer <token>'
+        },
+        apiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key',
+          description: 'API Key para acceso externo. Enviar en header X-API-Key'
         }
       }
     },
@@ -210,6 +216,22 @@ fastify.get('/health', {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
+  };
+});
+
+// DEBUG: Verificar variables de entorno
+fastify.get('/debug/env', async (request, reply) => {
+  const config = require('./config/default');
+  return {
+    timestamp: new Date().toISOString(),
+    env: {
+      API_KEY: process.env.API_KEY ? 'SET (' + process.env.API_KEY.substring(0, 10) + '...)' : 'NOT SET',
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    },
+    config: {
+      apiKey: config.apiKey ? 'SET (' + config.apiKey.substring(0, 10) + '...)' : 'NOT SET'
+    }
   };
 });
 

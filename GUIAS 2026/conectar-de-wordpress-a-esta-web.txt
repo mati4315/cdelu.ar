@@ -1,0 +1,525 @@
+# 🚀 Guía Completa: Conectar WordPress a CdelU API para Inyección de Publicaciones
+
+## 📋 Información General
+
+Esta guía explica cómo conectar tu sitio WordPress (sitio "esclavo") con tu API de CdelU para inyectar publicaciones automáticamente desde WordPress hacia la base de datos de CdelU.
+
+### 🎯 Objetivo
+Permitir que publicaciones creadas en WordPress se envíen automáticamente a tu sitio principal CdelU, manteniendo ambos sitios sincronizados.
+
+---
+
+## 🔧 Configuración en CdelU (Sitio Principal)
+
+### 1. Variables de Entorno
+Asegúrate de tener configurada la API Key en tu archivo `.env`:
+
+```bash
+# Archivo: .env (en la raíz de tu proyecto CdelU)
+API_KEY=EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY
+```
+
+### 2. Endpoint Disponible
+- **URL**: `https://tu-dominio.com/api/v1/news/external`
+- **Método**: POST
+- **Autenticación**: Header `X-API-Key`
+- **Content-Type**: `application/json`
+
+### 3. Campos de la API
+```json
+{
+  "titulo": "string (requerido) - Título de la publicación",
+  "descripcion": "string (requerido) - Contenido completo",
+  "image_url": "string (opcional) - URL de imagen destacada",
+  "original_url": "string (opcional) - URL de la publicación original en WordPress",
+  "is_oficial": "boolean (opcional, default: false) - Si es noticia oficial"
+}
+```
+
+---
+
+## 🏗️ Implementación en WordPress
+
+### Opción 1: Plugin Personalizado (Recomendado)
+
+#### Paso 1: Crear el Plugin
+Crea un archivo en `wp-content/plugins/cdelu-sync/cdelu-sync.php`:
+
+```php
+<?php
+/**
+ * Plugin Name: CdelU Sync
+ * Description: Sincroniza publicaciones de WordPress con CdelU API
+ * Version: 1.0.0
+ * Author: Tu Nombre
+ */
+
+// Evitar acceso directo
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class CdelUSync {
+    private $api_url;
+    private $api_key;
+    private $enabled_post_types;
+
+    public function __construct() {
+        $this->api_url = 'https://tu-dominio.com/api/v1/news/external'; // Cambia esto
+        $this->api_key = 'tu_api_key_muy_segura_aqui_12345'; // Cambia esto
+        $this->enabled_post_types = array('post'); // Tipos de post a sincronizar
+
+        add_action('save_post', array($this, 'sync_to_cdelu'), 10, 3);
+        add_action('admin_menu', array($this, 'add_settings_page'));
+        add_action('admin_init', array($this, 'register_settings'));
+    }
+
+    /**
+     * Sincroniza la publicación con CdelU cuando se guarda
+     */
+    public function sync_to_cdelu($post_id, $post, $update) {
+        // Solo sincronizar si es un tipo de post habilitado
+        if (!in_array($post->post_type, $this->enabled_post_types)) {
+            return;
+        }
+
+        // No sincronizar si es un borrador o revisión
+        if ($post->post_status !== 'publish') {
+            return;
+        }
+
+        // Evitar bucles infinitos
+        if (get_post_meta($post_id, '_cdelu_synced', true)) {
+            return;
+        }
+
+        // Preparar datos para enviar
+        $data = $this->prepare_post_data($post);
+
+        // Enviar a CdelU
+        $result = $this->send_to_cdelu($data);
+
+        if ($result['success']) {
+            update_post_meta($post_id, '_cdelu_synced', '1');
+            update_post_meta($post_id, '_cdelu_sync_time', current_time('mysql'));
+            error_log('CdelU Sync: Publicación sincronizada exitosamente - ID: ' . $post_id);
+        } else {
+            error_log('CdelU Sync Error: ' . $result['message']);
+        }
+    }
+
+    /**
+     * Prepara los datos del post para enviar a CdelU
+     */
+    private function prepare_post_data($post) {
+        // Obtener imagen destacada
+        $thumbnail_id = get_post_thumbnail_id($post->ID);
+        $image_url = '';
+        if ($thumbnail_id) {
+            $image_url = wp_get_attachment_url($thumbnail_id);
+        }
+
+        // Limpiar el contenido (remover shortcodes, etc.)
+        $content = apply_filters('the_content', $post->post_content);
+        $content = wp_strip_all_tags($content, true);
+
+        // Limitar longitud si es necesario
+        if (strlen($content) > 10000) {
+            $content = substr($content, 0, 9997) . '...';
+        }
+
+        return array(
+            'titulo' => $post->post_title,
+            'descripcion' => $content,
+            'image_url' => $image_url,
+            'original_url' => get_permalink($post->ID),
+            'is_oficial' => false
+        );
+    }
+
+    /**
+     * Envía los datos a la API de CdelU
+     */
+    private function send_to_cdelu($data) {
+        $args = array(
+            'body' => wp_json_encode($data),
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'X-API-Key' => $this->api_key
+            ),
+            'timeout' => 30,
+            'redirection' => 5,
+            'blocking' => true,
+            'sslverify' => true
+        );
+
+        $response = wp_remote_post($this->api_url, $args);
+
+        if (is_wp_error($response)) {
+            return array(
+                'success' => false,
+                'message' => $response->get_error_message()
+            );
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+
+        if ($response_code === 201) {
+            $body = json_decode($response_body, true);
+            return array(
+                'success' => true,
+                'data' => $body
+            );
+        } else {
+            return array(
+                'success' => false,
+                'message' => 'Error HTTP ' . $response_code . ': ' . $response_body
+            );
+        }
+    }
+
+    /**
+     * Agrega página de configuración al menú de admin
+     */
+    public function add_settings_page() {
+        add_options_page(
+            'CdelU Sync Settings',
+            'CdelU Sync',
+            'manage_options',
+            'cdelu-sync',
+            array($this, 'settings_page')
+        );
+    }
+
+    /**
+     * Registra las configuraciones
+     */
+    public function register_settings() {
+        register_setting('cdelu_sync_options', 'cdelu_api_url');
+        register_setting('cdelu_sync_options', 'cdelu_api_key');
+        register_setting('cdelu_sync_options', 'cdelu_enabled_types');
+    }
+
+    /**
+     * Página de configuración
+     */
+    public function settings_page() {
+        ?>
+        <div class="wrap">
+            <h1>CdelU Sync - Configuración</h1>
+            <form method="post" action="options.php">
+                <?php settings_fields('cdelu_sync_options'); ?>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">API URL</th>
+                        <td>
+                            <input type="text" name="cdelu_api_url" value="<?php echo esc_attr(get_option('cdelu_api_url', $this->api_url)); ?>" class="regular-text">
+                            <p class="description">URL del endpoint de CdelU API</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">API Key</th>
+                        <td>
+                            <input type="password" name="cdelu_api_key" value="<?php echo esc_attr(get_option('cdelu_api_key', $this->api_key)); ?>" class="regular-text">
+                            <p class="description">Clave API para autenticación</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Tipos de Post</th>
+                        <td>
+                            <input type="text" name="cdelu_enabled_types" value="<?php echo esc_attr(get_option('cdelu_enabled_types', 'post')); ?>" class="regular-text">
+                            <p class="description">Tipos de post a sincronizar (separados por coma)</p>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button(); ?>
+            </form>
+        </div>
+        <?php
+    }
+}
+
+// Inicializar el plugin
+new CdelUSync();
+```
+
+#### Paso 2: Activar el Plugin
+1. Sube la carpeta `cdelu-sync` a `wp-content/plugins/`
+2. Ve a WordPress Admin > Plugins
+3. Activa "CdelU Sync"
+
+#### Paso 3: Configurar el Plugin
+1. Ve a Settings > CdelU Sync
+2. Configura:
+   - **API URL**: `https://tu-dominio.com/api/v1/news/external`
+   - **API Key**: Tu clave API segura
+   - **Tipos de Post**: `post` (o `post,page` si quieres páginas también)
+
+### Opción 2: Código en functions.php (Más Simple)
+
+Si prefieres no crear un plugin, añade esto a tu `functions.php` del tema activo:
+
+```php
+// Configuración - MODIFICA ESTOS VALORES
+define('CDELU_API_URL', 'https://tu-dominio.com/api/v1/news/external');
+define('CDELU_API_KEY', 'tu_api_key_muy_segura_aqui_12345');
+
+/**
+ * Sincroniza publicaciones con CdelU cuando se publican
+ */
+function sync_post_to_cdelu($post_id, $post, $update) {
+    // Solo posts publicados
+    if ($post->post_status !== 'publish' || $post->post_type !== 'post') {
+        return;
+    }
+
+    // Evitar bucles
+    if (get_post_meta($post_id, '_cdelu_synced', true)) {
+        return;
+    }
+
+    // Preparar datos
+    $thumbnail_id = get_post_thumbnail_id($post_id);
+    $image_url = $thumbnail_id ? wp_get_attachment_url($thumbnail_id) : '';
+
+    $content = apply_filters('the_content', $post->post_content);
+    $content = wp_strip_all_tags($content, true);
+
+    $data = array(
+        'titulo' => $post->post_title,
+        'descripcion' => $content,
+        'image_url' => $image_url,
+        'original_url' => get_permalink($post_id),
+        'is_oficial' => false
+    );
+
+    // Enviar a CdelU
+    $response = wp_remote_post(CDELU_API_URL, array(
+        'body' => wp_json_encode($data),
+        'headers' => array(
+            'Content-Type' => 'application/json',
+            'X-API-Key' => CDELU_API_KEY
+        ),
+        'timeout' => 30
+    ));
+
+    if (!is_wp_error($response)) {
+        $response_code = wp_remote_retrieve_response_code($response);
+        if ($response_code === 201) {
+            update_post_meta($post_id, '_cdelu_synced', '1');
+            error_log('CdelU Sync: Post sincronizado - ID: ' . $post_id);
+        } else {
+            error_log('CdelU Sync Error: HTTP ' . $response_code);
+        }
+    }
+}
+add_action('save_post', 'sync_post_to_cdelu', 10, 3);
+```
+
+---
+
+## 🔍 Verificación y Testing
+
+### 1. Probar la Conexión
+Crea un script de prueba en WordPress para verificar:
+
+```php
+// Archivo: test-cdelu-connection.php (en la raíz de WordPress)
+<?php
+// Configuración
+$api_url = 'https://tu-dominio.com/api/v1/news/external';
+$api_key = 'tu_api_key_muy_segura_aqui_12345';
+
+$data = array(
+    'titulo' => 'Test desde WordPress',
+    'descripcion' => 'Esta es una publicación de prueba enviada desde WordPress.',
+    'is_oficial' => false
+);
+
+$response = wp_remote_post($api_url, array(
+    'body' => wp_json_encode($data),
+    'headers' => array(
+        'Content-Type' => 'application/json',
+        'X-API-Key' => $api_key
+    )
+));
+
+echo '<pre>';
+if (is_wp_error($response)) {
+    echo 'Error: ' . $response->get_error_message();
+} else {
+    echo 'Código de respuesta: ' . wp_remote_retrieve_response_code($response) . "\n";
+    echo 'Respuesta: ' . wp_remote_retrieve_body($response);
+}
+echo '</pre>';
+```
+
+### 2. Verificar Logs
+Revisa los logs de WordPress en `wp-content/debug.log` para ver mensajes de sincronización.
+
+### 3. Verificar en CdelU
+Después de publicar un post en WordPress, verifica que aparezca en:
+- La base de datos MySQL de CdelU (tabla `news`)
+- El feed unificado (tabla `content_feed`)
+- La interfaz web de CdelU
+
+---
+
+## 🔒 Consideraciones de Seguridad
+
+### 1. API Key
+- **Nunca** expongas la API Key en código público
+- Usa variables de entorno o constantes definidas
+- Rota la clave periódicamente
+
+### 2. Validación de Datos
+- Limpia el contenido antes de enviar
+- Valida URLs de imágenes
+- Limita la longitud del contenido
+
+### 3. Rate Limiting
+- Implementa delays entre sincronizaciones
+- Evita sincronizar borradores o auto-guardados
+
+### 4. SSL/TLS
+- Asegúrate de que ambas webs usen HTTPS
+- Verifica certificados SSL
+
+---
+
+## 🐛 Troubleshooting
+
+### Error: "API Key inválida"
+- Verifica que la API Key en WordPress coincida con la de CdelU
+- Asegúrate de enviar el header correcto: `X-API-Key`
+
+### Error: "Conexión rechazada"
+- Verifica que la URL de CdelU sea correcta
+- Confirma que el servidor de CdelU esté funcionando
+- Revisa firewalls y configuraciones de red
+
+### Error: "Timeout"
+- Aumenta el timeout en la configuración
+- Verifica la conectividad de red
+- Revisa si hay problemas de carga en el servidor
+
+### Publicaciones no se sincronizan
+- Confirma que el post esté publicado (no borrador)
+- Revisa los logs de WordPress
+- Verifica que el tipo de post esté habilitado
+- Confirma que no haya meta `_cdelu_synced` bloqueando
+
+### Imágenes no aparecen
+- Asegúrate de que la URL de la imagen sea pública
+- Verifica que WordPress genere URLs absolutas
+- Confirma que la imagen destacada esté configurada
+
+---
+
+## 📊 Monitoreo y Mantenimiento
+
+### 1. Dashboard de WordPress
+Añade un meta box para ver el estado de sincronización:
+
+```php
+function add_cdelu_sync_meta_box() {
+    add_meta_box(
+        'cdelu-sync-status',
+        'Estado de Sincronización CdelU',
+        'cdelu_sync_meta_box_callback',
+        'post',
+        'side'
+    );
+}
+
+function cdelu_sync_meta_box_callback($post) {
+    $synced = get_post_meta($post->ID, '_cdelu_synced', true);
+    $sync_time = get_post_meta($post->ID, '_cdelu_sync_time', true);
+
+    if ($synced) {
+        echo '<p style="color: green;">✅ Sincronizado</p>';
+        if ($sync_time) {
+            echo '<p>Última sync: ' . $sync_time . '</p>';
+        }
+    } else {
+        echo '<p style="color: orange;">⏳ Pendiente de sincronización</p>';
+    }
+}
+
+add_action('add_meta_boxes', 'add_cdelu_sync_meta_box');
+```
+
+### 2. Logs Avanzados
+Mejora el logging para debugging:
+
+```php
+function cdelu_log($message, $level = 'info') {
+    if (WP_DEBUG) {
+        error_log('[CdelU Sync] ' . strtoupper($level) . ': ' . $message);
+    }
+}
+```
+
+### 3. Sincronización Manual
+Añade un botón para forzar sincronización:
+
+```php
+function force_sync_to_cdelu($post_id) {
+    delete_post_meta($post_id, '_cdelu_synced');
+    // El hook save_post se ejecutará automáticamente
+    wp_update_post(array('ID' => $post_id));
+}
+```
+
+---
+
+## 🎯 Casos de Uso Avanzados
+
+### 1. Sincronización Selectiva
+Solo sincronizar posts con una categoría específica:
+
+```php
+function should_sync_post($post_id) {
+    $categories = wp_get_post_categories($post_id);
+    $sync_category = get_option('cdelu_sync_category', 0);
+
+    return in_array($sync_category, $categories);
+}
+```
+
+### 2. Contenido Personalizado
+Enviar campos personalizados de ACF:
+
+```php
+function prepare_custom_data($post) {
+    if (function_exists('get_field')) {
+        $custom_field = get_field('campo_personalizado', $post->ID);
+        // Procesar campo personalizado
+    }
+}
+```
+
+### 3. Sincronización Bidireccional
+Para sincronización de vuelta a WordPress, necesitarías webhooks en CdelU.
+
+---
+
+## 📞 Soporte
+
+Si encuentras problemas:
+
+1. Revisa los logs de ambos servidores
+2. Verifica la configuración de red
+3. Confirma versiones de PHP y WordPress
+4. Testea la API directamente con herramientas como Postman
+
+### Contacto
+- Documentación API: `https://tu-dominio.com/api/v1/docs`
+- Logs de CdelU: Revisa la consola del servidor
+- Logs de WordPress: `wp-content/debug.log`
+
+---
+
+*Última actualización: Marzo 2026*
+*Versión: 1.0.0*
