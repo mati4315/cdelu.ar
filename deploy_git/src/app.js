@@ -486,9 +486,7 @@ fastify.setErrorHandler((error, request, reply) => {
     .code(statusCode)
     .send({ 
       error: 'Error en el servidor', 
-      message: process.env.NODE_ENV === 'production' 
-        ? 'Ha ocurrido un error interno. Por favor intente más tarde.' 
-        : error.message,
+      message: error.message, // Mostrar el error real para diagnosticarlo
       code: 'INTERNAL_SERVER_ERROR',
       timestamp: new Date().toISOString()
     });

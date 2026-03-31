@@ -21,14 +21,40 @@ async function register(request, reply) {
 async function login(request, reply) {
   try {
     const { email, password } = request.body;
-    const res = await service.authenticateUser({ email, password });
-    if (!res.ok) return reply.status(401).send({ error: 'Credenciales inválidas' });
+    
+    if (!email || !password) {
+      return reply.status(400).send({ 
+        ok: false, 
+        error: 'Email y contraseña son requeridos' 
+      });
+    }
 
-    const token = await reply.jwtSign({ id: res.user.id, email: res.user.email, rol: res.user.rol });
-    return reply.send({ token, user: res.user });
+    const res = await service.authenticateUser({ email, password });
+    
+    if (!res.ok) {
+      return reply.status(401).send({ 
+        ok: false, 
+        error: 'Email o contraseña incorrectos' 
+      });
+    }
+
+    const token = await reply.jwtSign({ 
+      id: res.user.id, 
+      email: res.user.email, 
+      rol: res.user.rol 
+    });
+
+    return reply.send({ 
+      ok: true,
+      token, 
+      user: res.user 
+    });
   } catch (error) {
     request.log.error(error);
-    return reply.status(500).send({ error: 'Error al iniciar sesión' });
+    return reply.status(500).send({ 
+      ok: false,
+      error: error.message // Mostrar el mensaje real aquí también
+    });
   }
 }
 
