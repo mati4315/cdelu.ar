@@ -279,6 +279,36 @@ fastify.get('/api/v1/modules/config', async (request, reply) => {
   }
 });
 
+// --- RUTAS DE COMPATIBILIDAD FRONTEND ---
+
+// GET /api/v1/video-settings/public - Configuración de video (pestañas)
+fastify.get('/api/v1/video-settings/public', async (request, reply) => {
+  return reply.send({
+    isVideoEnabled: true,
+    lastModified: new Date().toISOString(),
+    modifiedBy: 'Sistema (Auto)'
+  });
+});
+
+// GET /api/v1/profile/me/stats - Estadísticas del perfil del usuario (Mockup compatible)
+fastify.get('/api/v1/profile/me/stats', { onRequest: [authenticate] }, async (request, reply) => {
+  return reply.send({
+    lottery_participations: 0,
+    lottery_wins: 0,
+    community_posts_count: 0,
+    comments_count: 0
+  });
+});
+
+// GET /api/v1/users/me/stats - Alias para estadísticas de usuario
+fastify.get('/api/v1/users/me/stats', { onRequest: [authenticate] }, async (request, reply) => {
+  return reply.send({
+    noticias_creadas: 0,
+    comentarios_realizados: 0,
+    likes_dados: 0
+  });
+});
+
 // Ruta para favicon (evita 404 en logs) - DEBE estar antes del hook onRequest
 fastify.get('/favicon.ico', async (request, reply) => {
   return reply.code(204).send();
@@ -374,9 +404,9 @@ fastify.get('/dashboard', async (request, reply) => {
   return reply.sendFile('dashboard.html');
 });
 
-// Ruta para la raíz que redirija al dashboard
+// Ruta para la raíz que redirija al index.html
 fastify.get('/', async (request, reply) => {
-  return reply.redirect('/dashboard.html');
+  return reply.redirect('/index.html');
 });
 
 // Hook para headers globales

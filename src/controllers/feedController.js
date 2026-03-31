@@ -35,42 +35,25 @@ async function getFeed(request, reply) {
       queryParams.push(parseInt(type));
     }
 
-    // Consulta para obtener el total de registros
-    const totalQuery = `
-      SELECT COUNT(*) as total 
-      FROM content_feed 
-      ${whereCondition}
-    `;
-    
-    const [totalResult] = await pool.execute(totalQuery, queryParams);
-    const total = totalResult[0].total;
+    // Definir query para contar total de registros
+    const totalQuery = `SELECT COUNT(*) as total FROM content_feed ${whereCondition}`;
 
-    // Consulta principal para obtener los datos CON información de likes del usuario
+    // Consulta para obtener el total de registros
+    const [totalResult] = await pool.query(totalQuery, queryParams);
+    const total = (totalResult && totalResult.length > 0) ? totalResult[0].total : 0;
+
+    // Consulta principal para obtener los datos
     let query;
     const finalParams = [];
     
     if (userId) {
-      // Si hay usuario autenticado, verificar likes
       query = `
         SELECT 
-          cf.id,
-          cf.titulo,
-          cf.descripcion,
-          cf.resumen,
-          cf.image_url,
-          cf.type,
-          cf.original_id,
-          cf.user_id,
-          cf.user_name,
-          cf.user_profile_picture,
-          cf.published_at,
-          cf.created_at,
-          cf.updated_at,
-          cf.original_url,
-          cf.is_oficial,
-          cf.video_url,
-          cf.likes_count,
-          cf.comments_count,
+          cf.id, cf.titulo, cf.descripcion, cf.resumen, cf.image_url,
+          cf.type, cf.original_id, cf.user_id, cf.user_name,
+          cf.user_profile_picture, cf.published_at, cf.created_at,
+          cf.updated_at, cf.original_url, cf.is_oficial,
+          cf.video_url, cf.likes_count, cf.comments_count,
           CASE 
             WHEN cf.type = 1 AND EXISTS(SELECT 1 FROM likes WHERE user_id = ? AND news_id = cf.original_id) THEN 1
             WHEN cf.type = 2 AND EXISTS(SELECT 1 FROM com_likes WHERE user_id = ? AND com_id = cf.original_id) THEN 1
@@ -81,29 +64,15 @@ async function getFeed(request, reply) {
         ORDER BY ${sortField} ${orderType}
         LIMIT ? OFFSET ?
       `;
-      finalParams.push(userId, userId); // Para las subconsultas de likes
+      finalParams.push(userId, userId);
     } else {
-      // Si no hay usuario, is_liked siempre es false
       query = `
         SELECT 
-          cf.id,
-          cf.titulo,
-          cf.descripcion,
-          cf.resumen,
-          cf.image_url,
-          cf.type,
-          cf.original_id,
-          cf.user_id,
-          cf.user_name,
-          cf.user_profile_picture,
-          cf.published_at,
-          cf.created_at,
-          cf.updated_at,
-          cf.original_url,
-          cf.is_oficial,
-          cf.video_url,
-          cf.likes_count,
-          cf.comments_count,
+          cf.id, cf.titulo, cf.descripcion, cf.resumen, cf.image_url,
+          cf.type, cf.original_id, cf.user_id, cf.user_name,
+          cf.user_profile_picture, cf.published_at, cf.created_at,
+          cf.updated_at, cf.original_url, cf.is_oficial,
+          cf.video_url, cf.likes_count, cf.comments_count,
           0 as is_liked
         FROM content_feed cf
         ${whereCondition}
@@ -111,71 +80,32 @@ async function getFeed(request, reply) {
         LIMIT ? OFFSET ?
       `;
     }
+    finalParams.push(...queryParams, parseInt(limit), offset);
+    const [rows] = await pool.query(query, finalParams);
 
-    // Preparar parámetros finales
-    finalParams.push(...queryParams); // Parámetros del WHERE
-    finalParams.push(parseInt(limit), offset); // Parámetros de paginación
-
-    const [rows] = await pool.execute(query, finalParams);
-
-    // Convertir is_liked de 0/1 a boolean y marcar anuncios originales
     let formattedRows = rows.map(row => ({
       ...row,
       is_liked: Boolean(row.is_liked),
-      is_ad: row.type === 3 // Marcar anuncios originales
+      is_ad: row.type === 3
     }));
 
-    // Si se solicita incluir publicidad, mezclar anuncios
-    if (includeAds === 'true' || includeAds === true) {
+    // Si se solicita incluir publicidad Y hay contenido para mezclar
+    if ((includeAds === 'true' || includeAds === true) && formattedRows.length > 0) {
       try {
-        // Obtener anuncios activos
-        const [adsResult] = await pool.execute(`
-          SELECT 
-            cf.id,
-            cf.titulo,
-            cf.descripcion,
-            cf.resumen,
-            cf.image_url,
-            cf.type,
-            cf.original_id,
-            cf.user_id,
-            cf.user_name,
-            cf.published_at,
-            cf.created_at,
-            cf.updated_at,
-            cf.original_url,
-            cf.is_oficial,
-            cf.video_url,
-            cf.likes_count,
-            cf.comments_count,
-            0 as is_liked
-          FROM content_feed cf
-          WHERE cf.type = 3 AND cf.is_oficial = TRUE
-          ORDER BY RAND()
-          LIMIT 10
+        const [adsResult] = await pool.query(`
+          SELECT * FROM content_feed 
+          WHERE type = 3 AND is_oficial = TRUE
+          ORDER BY RAND() LIMIT 5
         `);
 
-        const ads = adsResult.map(ad => ({
-          ...ad,
-          is_liked: false, // Los anuncios no tienen likes
-          is_ad: true // Marcar como anuncio mezclado
-        }));
-
-        console.log(`🔍 Anuncios obtenidos para mezcla: ${ads.length}`);
-        ads.forEach((ad, index) => {
-          console.log(`   ${index + 1}. ID: ${ad.id}, Título: ${ad.titulo}, is_ad: ${ad.is_ad}`);
-        });
-
-        // Mezclar anuncios con contenido
-        formattedRows = mixAdsWithContent(formattedRows, ads);
-      } catch (error) {
-        console.error('Error al obtener anuncios para el feed:', error);
-        // Continuar sin anuncios si hay error
+        if (adsResult.length > 0) {
+          const ads = adsResult.map(ad => ({ ...ad, is_liked: false, is_ad: true }));
+          formattedRows = mixAdsWithContent(formattedRows, ads);
+        }
+      } catch (e) {
+        console.error('Error mixing ads:', e);
       }
     }
-
-    // Calcular páginas totales
-    const totalPages = Math.ceil(total / limit);
 
     return reply.send({
       data: formattedRows,
@@ -183,14 +113,14 @@ async function getFeed(request, reply) {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages
+        totalPages: Math.ceil(total / limit) || 1
       }
     });
 
   } catch (error) {
-    console.error('Error al obtener el feed:', error);
-    reply.status(500).send({
-      error: 'Error interno del servidor',
+    request.log.error(error);
+    return reply.status(500).send({
+      error: 'Error al obtener el feed',
       message: error.message
     });
   }
@@ -269,7 +199,7 @@ async function getFeedItem(request, reply) {
       queryParams.push(parseInt(id), parseInt(type));
     }
 
-    const [rows] = await pool.execute(query, queryParams);
+    const [rows] = await pool.query(query, queryParams);
 
     if (rows.length === 0) {
       return reply.status(404).send({
@@ -366,12 +296,12 @@ async function syncFeed(request, reply) {
     const newsQuery = `
       INSERT INTO content_feed (
         titulo, descripcion, resumen, image_url, type, original_id, 
-        user_id, user_name, published_at, created_at, updated_at,
+        user_id, user_name, user_profile_picture, published_at, created_at, updated_at,
         original_url, is_oficial
       )
       SELECT 
         n.titulo, n.descripcion, n.resumen, n.image_url, 1, n.id,
-        n.created_by, u.nombre, n.published_at, n.created_at, n.updated_at,
+        n.created_by, u.nombre, u.profile_picture_url, n.published_at, n.created_at, n.updated_at,
         n.original_url, n.is_oficial
       FROM news n
       LEFT JOIN users u ON n.created_by = u.id
@@ -383,12 +313,12 @@ async function syncFeed(request, reply) {
     const comQuery = `
       INSERT INTO content_feed (
         titulo, descripcion, image_url, type, original_id,
-        user_id, user_name, published_at, created_at, updated_at,
+        user_id, user_name, user_profile_picture, published_at, created_at, updated_at,
         video_url
       )
       SELECT 
         c.titulo, c.descripcion, c.image_url, 2, c.id,
-        c.user_id, u.nombre, c.created_at, c.created_at, c.updated_at,
+        c.user_id, u.nombre, u.profile_picture_url, c.created_at, c.created_at, c.updated_at,
         c.video_url
       FROM com c
       LEFT JOIN users u ON c.user_id = u.id
