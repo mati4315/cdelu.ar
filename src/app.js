@@ -110,10 +110,10 @@ fastify.register(require('@fastify/swagger'), {
     servers: [
       {
         url: process.env.NODE_ENV === 'production' 
-          ? 'https://diario.trigamer.xyz' 
+          ? 'https://api.cdelu.ar' 
           : 'http://localhost:3001',
         description: process.env.NODE_ENV === 'production' 
-          ? 'Servidor de Producción' 
+          ? 'Servidor de Producción (cdelu.ar)' 
           : 'Servidor de Desarrollo'
       }
     ],

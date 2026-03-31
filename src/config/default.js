@@ -50,10 +50,9 @@ module.exports = {
     // Configuración por defecto según entorno
     if (process.env.NODE_ENV === 'production') {
       return [
-        'https://trigamer.xyz',
-        'https://www.trigamer.xyz',
-        'https://diario.trigamer.xyz',
-        'https://www.diario.trigamer.xyz',
+        'https://cdelu.ar',
+        'https://www.cdelu.ar',
+        'https://api.cdelu.ar', // Por si usas subdominio para API
         // Apps móviles (Android/iOS) - permitir todos los orígenes
         '*'
       ];

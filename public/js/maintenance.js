@@ -95,3 +95,87 @@ window.blockSuspiciousIPs = function() {
         apiAction('/admin/security/block-ips', 'POST', 'IPs sospechosas bloqueadas', 'Error al bloquear IPs');
     }
 };
+
+// === NUEVAS FUNCIONES DE BACKUP ===
+
+// Cargar estado inicial del backup
+function loadBackupStatus() {
+    DashboardApp.apiFetch('/admin/database/backup-settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const status = data.data;
+            const toggle = document.getElementById('autoBackupToggle');
+            const timeSpan = document.getElementById('lastBackupTime');
+            
+            if (toggle) toggle.checked = status.auto_backup_enabled;
+            if (timeSpan) {
+                if (status.last_backup_time && status.last_backup_time !== 'Nunca') {
+                    timeSpan.innerText = new Date(status.last_backup_time).toLocaleString();
+                } else {
+                    timeSpan.innerText = 'Nunca';
+                }
+            }
+        }
+    })
+    .catch(error => console.error('[Maintenance] Error cargando backup status:', error));
+}
+
+window.toggleAutoBackup = function(enabled) {
+    DashboardApp.apiFetch('/admin/database/backup-settings', {
+        method: 'PUT',
+        body: JSON.stringify({ enabled })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            DashboardApp.showNotification(data.message, 'success');
+        } else {
+            DashboardApp.showNotification(data.message || 'Error al cambiar configuración', 'error');
+            // Revertir el toggle si falló
+            document.getElementById('autoBackupToggle').checked = !enabled;
+        }
+    })
+    .catch(error => {
+        console.error('[Maintenance] Error toggling auto-backup:', error);
+        DashboardApp.showNotification('Error de conexión', 'error');
+        document.getElementById('autoBackupToggle').checked = !enabled;
+    });
+};
+
+// Sobrescribir backupDatabase existente para actualizar el tiempo
+const originalBackupDatabase = window.backupDatabase;
+window.backupDatabase = function() {
+    if (confirm('¿Estás seguro de que quieres crear un backup de la base de datos?')) {
+        DashboardApp.showNotification('Iniciando respaldo de base de datos...', 'info');
+        DashboardApp.apiFetch('/admin/database/backup', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                DashboardApp.showNotification(`Backup completado: ${data.data.backup_file} (${data.data.backup_size})`, 'success');
+                // Actualizar la fecha en el UI
+                const timeSpan = document.getElementById('lastBackupTime');
+                if (timeSpan) timeSpan.innerText = new Date().toLocaleString();
+            } else {
+                DashboardApp.showNotification(data.message || 'Error al crear el backup', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('[Maintenance] Error en backup:', error);
+            DashboardApp.showNotification('Error al crear el backup', 'error');
+        });
+    }
+};
+
+// Inicializar cuando se carga el script
+document.addEventListener('DOMContentLoaded', () => {
+    // Si ya estamos en la pestaña de mantenimiento al cargar, o cuando se cambie a ella
+    loadBackupStatus();
+});
+
+// También recargar cuando se pulsa el enlace de mantenimiento en el sidebar
+document.querySelectorAll('[data-tab="maintenance"]').forEach(el => {
+    el.addEventListener('click', () => {
+        setTimeout(loadBackupStatus, 100);
+    });
+});

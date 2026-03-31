@@ -34,7 +34,7 @@ deploy/
 
 ### Paso 2: Configurar Base de Datos
 1. **Acceder a phpMyAdmin**: cPanel > Bases de datos MySQL > phpMyAdmin
-2. **Crear base de datos**: Crea una base de datos llamada `trigamer_diario`
+2. **Crear base de datos**: Crea una base de datos llamada `cdelu_diario`
 3. **Crear usuario MySQL**: Crea un usuario con permisos en la base de datos
 4. **Ejecutar script SQL**: Ejecuta el contenido de `setup_database.sql`
 
@@ -57,7 +57,7 @@ deploy/
 ### Paso 5: Instalar Dependencias
 En la terminal de cPanel:
 ```bash
-cd /home/tu_usuario/diario.trigamer.xyz
+cd /home/tu_usuario/cdelu.ar
 npm install
 npm install undici@5.28.4 --save
 ```
@@ -69,7 +69,7 @@ npm install undici@5.28.4 --save
 ## 🔍 Verificación Post-Deploy
 
 ### 1. Verificar Sitio Web
-- Visita: https://diario.trigamer.xyz
+- Visita: https://cdelu.ar
 - Debería cargar el panel de login
 
 ### 2. Probar Login
@@ -79,7 +79,7 @@ npm install undici@5.28.4 --save
 
 ### 3. Probar API
 ```bash
-curl -X POST https://diario.trigamer.xyz/api/v1/auth/login \
+curl -X POST https://api.cdelu.ar/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"123456"}'
 ```

@@ -1,0 +1,660 @@
+# 🔄 MÓDULO DE INTEGRACIÓN: WordPress → CdelU API
+
+## 📋 Información General
+
+**Nombre del Módulo:** WordPress-CdelU Sync
+**Versión:** 1.0.0
+**Fecha de Creación:** Marzo 2026
+**Propósito:** Sincronización automática de publicaciones desde WordPress hacia CdelU
+
+---
+
+## 🎯 Propósito y Alcance
+
+### **Objetivo Principal**
+Permitir que publicaciones creadas en WordPress se sincronicen automáticamente con el sistema CdelU, manteniendo ambos sistemas actualizados en tiempo real.
+
+### **Casos de Uso**
+- ✅ **Publicación automática:** Al publicar en WordPress, se crea automáticamente en CdelU
+- ✅ **Sincronización bidireccional:** Futura expansión para sincronización de vuelta
+- ✅ **Multi-sitio:** Soporte para múltiples instancias de WordPress
+- ✅ **Categorización:** Mapeo automático de categorías entre sistemas
+
+### **Beneficios**
+- 🔄 **Eliminación de duplicación manual** de contenido
+- 📊 **Centralización** de contenido en CdelU
+- 🤖 **Automatización** de procesos editoriales
+- 📱 **Compatibilidad móvil** inherente
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+### **Componentes Principales**
+
+#### **1. Lado WordPress**
+```
+📁 wp-content/plugins/cdelu-sync/
+├── 📄 cdelu-sync.php          # Plugin principal
+├── 📄 admin-settings.php      # Panel de configuración
+├── 📄 sync-engine.php         # Motor de sincronización
+├── 📄 error-handler.php       # Manejo de errores
+└── 📄 logger.php             # Sistema de logs
+```
+
+#### **2. Lado CdelU**
+```
+📁 src/
+├── 📁 middlewares/
+│   └── 📄 auth.js             # Middleware de autenticación API Key
+├── 📁 features/news/
+│   ├── 📄 news.routes.js      # Rutas de la API
+│   ├── 📄 news.controller.js  # Controladores
+│   └── 📄 news.service.js     # Lógica de negocio
+├── 📁 config/
+│   └── 📄 default.js          # Configuración del sistema
+└── 📄 app.js                  # Configuración de Fastify
+```
+
+#### **3. Base de Datos**
+```
+📊 MySQL Database: trigamer_diario
+├── 📄 news                    # Tabla de noticias
+├── 📄 content_feed           # Feed unificado
+├── 📄 users                  # Usuarios del sistema
+└── 📄 system_modules         # Configuración de módulos
+```
+
+---
+
+## 🔄 Flujo de Datos
+
+### **Secuencia de Sincronización**
+
+```
+1. 📝 Usuario crea/edita post en WordPress
+2. 🎣 Hook 'save_post' se activa
+3. 🔍 Plugin valida el post (tipo, estado, etc.)
+4. 📦 Extrae datos del post (título, contenido, imagen, etc.)
+5. 🔧 Procesa contenido (limpia HTML, limita longitud)
+6. 🌐 Envía HTTP POST a CdelU API
+7. 🔐 CdelU valida API Key
+8. 💾 Inserta noticia en base de datos
+9. 🔗 Actualiza feed unificado (trigger automático)
+10. ✅ Respuesta de éxito/error a WordPress
+11. 📝 Registra resultado en logs
+```
+
+### **Campos Mapeados**
+
+| WordPress | CdelU API | Tipo | Requerido | Notas |
+|-----------|-----------|------|-----------|-------|
+| post_title | titulo | string | ✅ | Título de la noticia |
+| post_content | descripcion | string | ✅ | Contenido principal |
+| _thumbnail_id | image_url | string | ❌ | URL de la imagen (opcional) |
+| permalink | original_url | string | ❌ | Link original a WordPress (opcional) |
+
+**🎯 Simplificación:** Solo envía `titulo` y `descripcion`. El servidor configura automáticamente:
+- ✅ `is_oficial = 1` (siempre oficial)
+- ✅ `created_by = 1` (usuario Matias Moreiraa)
+- ✅ `published_at = NOW()` (fecha/hora actual)
+- ✅ `resumen = generado automáticamente` (si IA está disponible)
+
+---
+
+## 🔐 Sistema de Autenticación
+
+### **API Key Authentication**
+- **Tipo:** Header-based authentication
+- **Header:** `X-API-Key`
+- **Valor:** `EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY`
+- **Validación:** Comparación exacta en middleware
+
+### **Implementación en WordPress**
+```php
+$headers = array(
+    'Content-Type' => 'application/json',
+    'X-API-Key' => 'EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY'
+);
+```
+
+### **Implementación en CdelU**
+```javascript
+const authenticateApiKey = (request, reply) => {
+    const config = require('../config/default');
+    const apiKey = request.headers['x-api-key'];
+
+    if (!apiKey || apiKey !== config.apiKey) {
+        return reply.status(401).send({ error: 'API Key inválida' });
+    }
+};
+```
+
+---
+
+## 📡 API Endpoints
+
+### **Endpoint Principal**
+```
+POST /api/v1/news/external
+```
+
+**Headers requeridos:**
+```
+Content-Type: application/json
+X-API-Key: [API_KEY]
+```
+
+**Body (JSON) - SOLO REQUERIDO:**
+```json
+{
+  "titulo": "Título de la noticia",
+  "descripcion": "Contenido principal de la noticia"
+}
+```
+
+**Body (JSON) - EJEMPLO COMPLETO (opcional campos):**
+```json
+{
+  "titulo": "Se implementó nuevo sistema de votación",
+  "descripcion": "La comunidad de CdelU ha lanzado un nuevo sistema de votación con mejor interfaz y más opciones de participación.",
+  "image_url": "https://example.com/images/votacion.jpg",
+  "original_url": "https://wordpress.com/noticias/votacion/"
+}
+```
+
+**Configuración Automática en CdelU:**
+```json
+{
+  "is_oficial": true,           // ✅ SIEMPRE oficial
+  "created_by": 1,              // ✅ SIEMPRE Matias Moreiraa
+  "published_at": "NOW()",      // ✅ Fecha/hora actual
+  "resumen": "generado"         // ✅ Se genera automáticamente si hay IA
+}
+```
+
+**Respuestas:**
+- ✅ `201 Created` - Noticia creada exitosamente
+- ❌ `401 Unauthorized` - API Key inválida
+- ❌ `400 Bad Request` - Datos inválidos
+- ❌ `500 Internal Server Error` - Error del servidor
+
+### **Endpoints de Diagnóstico**
+```
+GET /health              # Health check básico
+GET /debug/env           # Variables de entorno (debug)
+GET /api/v1/status       # Estado detallado del sistema
+```
+
+---
+
+## ⚙️ Configuración del Sistema
+
+### **Variables de Entorno (.env)**
+```bash
+# 🔐 API Key para autenticación externa
+API_KEY=EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY
+
+# 🤖 Configuración de WordPress Integration
+WORDPRESS_USER_ID=1                    # ID del usuario: Matias Moreiraa
+WORDPRESS_FORCE_OFICIAL=true           # Noticias de WP siempre son oficiales
+
+# 💾 Configuración de base de datos
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=trigamer_diario
+
+# 🖥️ Configuración del servidor
+NODE_ENV=development
+PORT=3001
+```
+
+### **Configuración de WordPress**
+```php
+// En functions.php o plugin - VERSIÓN SIMPLE
+define('CDELU_API_URL', 'http://localhost:3001/api/v1/news/external');
+define('CDELU_API_KEY', 'EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY');
+
+// Función simple para sincronizar
+function sync_post_to_cdelu($post_id) {
+    $post = get_post($post_id);
+    
+    if (!$post || $post->post_status !== 'publish') {
+        return; // Solo publicados
+    }
+    
+    $data = array(
+        'titulo' => $post->post_title,
+        'descripcion' => wp_strip_all_tags($post->post_content),
+        'image_url' => get_the_post_thumbnail_url($post_id),
+        'original_url' => get_permalink($post_id)
+    );
+    
+    $response = wp_remote_post(CDELU_API_URL, array(
+        'headers' => array(
+            'Content-Type' => 'application/json',
+            'X-API-Key' => CDELU_API_KEY
+        ),
+        'body' => json_encode($data)
+    ));
+    
+    if (is_wp_error($response)) {
+        error_log('CdelU sync error: ' . $response->get_error_message());
+    } else {
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code === 201) {
+            update_post_meta($post_id, '_cdelu_synced', '1');
+        }
+    }
+}
+
+// Hook automático
+add_action('publish_post', 'sync_post_to_cdelu');
+add_action('publish_page', 'sync_post_to_cdelu');
+```
+
+**🎯 Lo que hace automáticamente CdelU:**
+- ✅ Marca como oficial (is_oficial=1)
+- ✅ Asigna a Matias Moreiraa (created_by=1)
+- ✅ Define fecha actual (published_at=NOW())
+- ✅ Genera resumen automático (si IA disponible)
+
+---
+
+## 🔧 Funcionalidades del Módulo
+
+### **1. Sincronización Automática**
+- ✅ **Hook 'save_post'** - Se activa al guardar/publicar
+- ✅ **Validación de estado** - Solo posts publicados
+- ✅ **Prevención de bucles** - Meta '_cdelu_synced' para evitar duplicados
+- ✅ **Procesamiento de contenido** - Limpieza HTML, límites de longitud
+
+### **2. Manejo de Medios**
+- ✅ **Imágenes destacadas** - Extrae URL de thumbnail
+- ✅ **Galerías** - Soporte futuro para múltiples imágenes
+- ✅ **Videos** - Integración con YouTube/Vimeo
+- ✅ **Archivos adjuntos** - Sincronización de PDFs/docs
+
+### **3. Sistema de Logs**
+- ✅ **Logs de WordPress** - En `wp-content/debug.log`
+- ✅ **Logs de CdelU** - En consola del servidor
+- ✅ **Niveles de log** - ERROR, WARNING, INFO, DEBUG
+- ✅ **Trazabilidad** - ID de post y timestamp
+
+### **4. Manejo de Errores**
+- ✅ **Reintentos automáticos** - Hasta 3 intentos con backoff
+- ✅ **Fallbacks** - Modo offline/degradado
+- ✅ **Notificaciones** - Email al administrador
+- ✅ **Recuperación** - Comando manual de sincronización
+
+---
+
+## 📱 Adaptaciones para Móviles
+
+### **App Móvil WordPress**
+```javascript
+// React Native / Flutter
+const syncToCdelu = async (postData) => {
+    try {
+        const response = await fetch('http://localhost:3001/api/v1/news/external', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': 'EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY'
+            },
+            body: JSON.stringify(postData)
+        });
+
+        if (response.ok) {
+            // Marcar como sincronizado en local storage
+            await AsyncStorage.setItem(`cdelu_synced_${postData.id}`, 'true');
+        }
+    } catch (error) {
+        // Queue para reintento offline
+        await queueForRetry(postData);
+    }
+};
+```
+
+### **App Móvil CdelU**
+```kotlin
+// Android (Kotlin)
+suspend fun syncFromWordPress(postData: PostData) {
+    val apiKey = "EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY"
+    val response = apiService.createNews(
+        headers = mapOf("X-API-Key" to apiKey),
+        body = postData.toJson()
+    )
+
+    if (response.isSuccessful) {
+        // Actualizar UI y cache local
+        updateLocalCache(response.body())
+    }
+}
+```
+
+---
+
+## 🔄 Adaptaciones para Otros Lenguajes
+
+### **Python (Django/Flask) - VERSIÓN SIMPLE**
+```python
+import requests
+import os
+
+def sync_to_cdelu(titulo, descripcion, image_url=None, original_url=None):
+    """
+    Envía una noticia a CdelU. Solo requiere título y descripción.
+    El servidor configura automáticamente: oficial, autor, fecha, etc.
+    """
+    api_url = os.getenv('CDELU_API_URL', 'http://localhost:3001/api/v1/news/external')
+    api_key = os.getenv('CDELU_API_KEY')
+
+    headers = {
+        'Content-Type': 'application/json',
+        'X-API-Key': api_key
+    }
+    
+    # ✅ Datos MÍNIMOS requeridos
+    data = {
+        'titulo': titulo,
+        'descripcion': descripcion
+    }
+    
+    # ⚠️ Campos opcionales
+    if image_url:
+        data['image_url'] = image_url
+    if original_url:
+        data['original_url'] = original_url
+
+    response = requests.post(api_url, json=data, headers=headers)
+
+    if response.status_code == 201:
+        result = response.json()
+        print(f"✅ Noticia creada: ID {result['data']['id']}")
+        print(f"   Oficial: {result['data']['is_oficial']}")
+        print(f"   Autor: {result['data']['autor']}")
+        return True
+    else:
+        print(f"❌ Error: {response.text}")
+        return False
+
+# Uso simple:
+sync_to_cdelu(
+    titulo="Nueva noticia de votación",
+    descripcion="Se implementó un nuevo sistema de votación..."
+)
+```
+
+### **Ruby (Rails)**
+```ruby
+class CdeluSyncService
+  API_URL = ENV['CDELU_API_URL']
+  API_KEY = ENV['CDELU_API_KEY']
+
+  def self.sync_post(post)
+    headers = {
+      'Content-Type' => 'application/json',
+      'X-API-Key' => API_KEY
+    }
+
+    payload = {
+      titulo: post.title,
+      descripcion: post.content,
+      image_url: post.featured_image&.url,
+      original_url: post.url,
+      is_oficial: false
+    }
+
+    response = HTTParty.post(API_URL, headers: headers, body: payload.to_json)
+
+    if response.success?
+      post.update(cdelu_synced: true)
+      Rails.logger.info "Post #{post.id} synced to CdelU"
+    else
+      Rails.logger.error "Failed to sync post #{post.id}: #{response.body}"
+    end
+  end
+end
+```
+
+### **Go**
+```go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "log"
+    "net/http"
+    "os"
+)
+
+type PostData struct {
+    Titulo      string `json:"titulo"`
+    Descripcion string `json:"descripcion"`
+    ImageURL    string `json:"image_url,omitempty"`
+    OriginalURL string `json:"original_url,omitempty"`
+    IsOficial   bool   `json:"is_oficial"`
+}
+
+func syncToCdelu(post PostData) error {
+    apiURL := os.Getenv("CDELU_API_URL")
+    apiKey := os.Getenv("CDELU_API_KEY")
+
+    jsonData, err := json.Marshal(post)
+    if err != nil {
+        return err
+    }
+
+    req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
+    if err != nil {
+        return err
+    }
+
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("X-API-Key", apiKey)
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode == 201 {
+        log.Printf("Post synced successfully: %s", post.Titulo)
+        return nil
+    } else {
+        log.Printf("Failed to sync post: %d", resp.StatusCode)
+        return fmt.Errorf("sync failed with status %d", resp.StatusCode)
+    }
+}
+```
+
+### **C# (.NET)**
+```csharp
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+public class CdeluSyncService
+{
+    private readonly string _apiUrl;
+    private readonly string _apiKey;
+    private readonly HttpClient _httpClient;
+
+    public CdeluSyncService()
+    {
+        _apiUrl = Environment.GetEnvironmentVariable("CDELU_API_URL");
+        _apiKey = Environment.GetEnvironmentVariable("CDELU_API_KEY");
+        _httpClient = new HttpClient();
+    }
+
+    public async Task<bool> SyncPostAsync(PostData post)
+    {
+        var json = JsonConvert.SerializeObject(post);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
+
+        var response = await _httpClient.PostAsync(_apiUrl, content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Marcar como sincronizado
+            post.CdeluSynced = true;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation($"Post {post.Id} synced to CdelU");
+            return true;
+        }
+        else
+        {
+            _logger.LogError($"Failed to sync post {post.Id}: {response.StatusCode}");
+            return false;
+        }
+    }
+}
+
+public class PostData
+{
+    public string Titulo { get; set; }
+    public string Descripcion { get; set; }
+    public string ImageUrl { get; set; }
+    public string OriginalUrl { get; set; }
+    public bool IsOficial { get; set; }
+}
+```
+
+---
+
+## 📊 Monitoreo y Métricas
+
+### **Métricas a Monitorear**
+- ✅ **Tasa de éxito** de sincronización
+- ✅ **Tiempo de respuesta** de la API
+- ✅ **Número de reintentos** por post
+- ✅ **Errores por tipo** (401, 500, timeout)
+- ✅ **Uptime** del servicio CdelU
+
+### **Dashboard de Monitoreo**
+```php
+// WordPress Admin Dashboard Widget
+function cdelu_sync_dashboard_widget() {
+    $synced_posts = get_posts(array(
+        'meta_key' => '_cdelu_synced',
+        'meta_value' => '1',
+        'numberposts' => -1
+    ));
+
+    $failed_posts = get_posts(array(
+        'meta_key' => '_cdelu_sync_failed',
+        'meta_value' => '1',
+        'numberposts' => -1
+    ));
+
+    echo "<p><strong>Posts sincronizados:</strong> " . count($synced_posts) . "</p>";
+    echo "<p><strong>Posts con error:</strong> " . count($failed_posts) . "</p>";
+    echo "<p><strong>Estado API:</strong> <span id='api-status'>Verificando...</span></p>";
+}
+```
+
+---
+
+## 🔮 Futuras Expansiones
+
+### **Funcionalidades Planificadas**
+- 🔄 **Sincronización bidireccional** (CdelU → WordPress)
+- 📱 **Apps móviles nativas** para ambos sistemas
+- 🤖 **IA para categorización automática**
+- 📊 **Analytics y reporting avanzado**
+- 🔍 **Búsqueda unificada** entre sistemas
+- 🎨 **Plantillas personalizables** para diferentes tipos de contenido
+
+### **Integraciones Adicionales**
+- 📧 **Email marketing** (Mailchimp, Sendinblue)
+- 📢 **Redes sociales** (Twitter, Facebook, LinkedIn)
+- 💬 **Chatbots** para moderación
+- 📈 **SEO tools** integration
+- 🎥 **Video streaming** (YouTube, Vimeo)
+
+---
+
+## 🛠️ Mantenimiento y Troubleshooting
+
+### **Comandos de Mantenimiento**
+```bash
+# Verificar estado del servicio
+curl http://localhost:3001/health
+
+# Ver logs de sincronización
+tail -f wp-content/debug.log | grep "CdelU"
+
+# Limpiar posts huérfanos
+wp eval "delete_post_meta_by_key('_cdelu_synced');"
+
+# Forzar re-sincronización
+wp eval "update_post_meta(123, '_cdelu_synced', '0');"
+```
+
+### **Backup y Recovery**
+```bash
+# Backup de configuración
+cp .env .env.backup
+cp wp-config.php wp-config.php.backup
+
+# Recovery script
+#!/bin/bash
+# Restaurar configuración
+cp .env.backup .env
+cp wp-config.php.backup wp-config.php
+
+# Reiniciar servicios
+sudo systemctl restart nginx
+sudo systemctl restart mysql
+npm start
+```
+
+---
+
+## 📚 Referencias Técnicas
+
+### **Documentación Relacionada**
+- `conectar-de-wordpress-a-esta-web.txt` - Guía de implementación
+- `DIAGNOSTICO-HTTP-401.txt` - Troubleshooting
+- `PARA-TU-DESARROLLADOR.md` - Guía técnica para desarrolladores
+
+### **APIs Utilizadas**
+- **WordPress REST API** - Para obtener datos de posts
+- **CdelU API** - Para crear noticias
+- **MySQL** - Base de datos compartida
+
+### **Librerías y Dependencias**
+- **WordPress:** wp_remote_post(), wp_strip_all_tags()
+- **Node.js:** fastify, mysql2, dotenv
+- **PHP:** curl, json_encode()
+- **JavaScript:** axios, fetch API
+
+---
+
+## 🎯 Conclusión
+
+Este módulo representa una solución robusta y escalable para la integración entre WordPress y CdelU, diseñada con principios de:
+
+- 🔒 **Seguridad** - Autenticación API Key
+- 🔄 **Fiabilidad** - Reintentos y manejo de errores
+- 📈 **Escalabilidad** - Arquitectura modular
+- 🔧 **Mantenibilidad** - Código bien documentado
+- 🌐 **Adaptabilidad** - Soporte multi-plataforma
+
+La arquitectura permite futuras expansiones a móviles, otros lenguajes y nuevas funcionalidades sin requerir cambios mayores en la estructura base.
+
+---
+
+**Versión:** 1.0.0
+**Última actualización:** Marzo 2026
+**Autor:** Sistema de Integración CdelU
+**Compatibilidad:** WordPress 5.0+, Node.js 16+, MySQL 5.7+

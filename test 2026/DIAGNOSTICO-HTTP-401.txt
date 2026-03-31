@@ -1,0 +1,219 @@
+# 🔍 Guía de Diagnóstico: HTTP 401 Unauthorized
+
+## 📊 Análisis del Problema
+
+| Componente | Estado | Detalles |
+|------------|--------|----------|
+| WordPress Plugin | ✅ **Correcto** | Envía datos correctamente |
+| Servidor CdelU | ✅ **Corriendo** | Responde a requests |
+| API Key | ✅ **Enviada** | Header `X-API-Key` presente |
+| Autenticación | ❌ **Falla** | CdelU no valida la API Key |
+
+**Conclusión:** El problema está 100% en el lado de CdelU, no en WordPress.
+
+---
+
+## 🛠️ Scripts de Diagnóstico
+
+### 1. Test Básico de Conectividad
+```bash
+# Verificar que CdelU responde
+curl http://localhost:3001/health
+```
+
+**Resultado esperado:**
+```json
+{
+  "status": "OK",
+  "timestamp": "2026-03-26T...",
+  "uptime": 123.45
+}
+```
+
+### 2. Test de API Key
+```bash
+# Probar autenticación
+curl -X POST http://localhost:3001/api/v1/news/external \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY" \
+  -d '{
+    "titulo": "Test Diagnóstico",
+    "descripcion": "Verificando API Key",
+    "is_oficial": false
+  }'
+```
+
+**Posibles resultados:**
+- ✅ `HTTP 201 Created` → Todo bien
+- ❌ `HTTP 401 Unauthorized` → API Key no válida
+- ❌ `HTTP 404 Not Found` → Endpoint no existe
+
+### 3. Verificar Variables de Entorno
+```bash
+# En terminal de CdelU
+node -e "console.log('API_KEY:', process.env.API_KEY)"
+```
+
+**Resultado esperado:**
+```
+API_KEY: EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY
+```
+
+---
+
+## 🔍 Posibles Problemas y Soluciones
+
+### Problema 1: API Key no configurada
+**Síntomas:** HTTP 401
+**Solución:**
+```bash
+# Verificar .env
+cat .env | grep API_KEY
+# Debe mostrar: API_KEY=EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY
+```
+
+### Problema 2: Middleware faltante
+**Síntomas:** HTTP 401
+**Solución:** Añadir middleware en `src/middlewares/auth.js`:
+
+```javascript
+const authenticateApiKey = (request, reply) => {
+  const config = require('../config/default');
+  const apiKey = request.headers['x-api-key'];
+
+  if (!apiKey || apiKey !== config.apiKey) {
+    return reply.status(401).send({ error: 'API Key inválida' });
+  }
+};
+```
+
+### Problema 3: Middleware no aplicado
+**Síntomas:** HTTP 401
+**Solución:** Aplicar middleware en la ruta:
+
+```javascript
+// En src/features/news/news.routes.js
+fastify.post('/api/v1/news/external', {
+  onRequest: [authenticateApiKey],
+  // ... resto de configuración
+}, ctrl.createExternalNews);
+```
+
+### Problema 4: Servidor no reiniciado
+**Síntomas:** Cambios no aplican
+**Solución:**
+```bash
+# Detener servidor (Ctrl+C)
+# Reiniciar
+npm start
+```
+
+---
+
+## 📋 Checklist de Verificación
+
+### Para tu Desarrollador:
+- [ ] `.env` contiene `API_KEY=EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY`
+- [ ] Middleware `authenticateApiKey` existe en `src/middlewares/auth.js`
+- [ ] Middleware aplicado a ruta `/api/v1/news/external`
+- [ ] Servidor reiniciado después de cambios
+- [ ] cURL test devuelve HTTP 201
+- [ ] WordPress plugin funciona
+
+### Comandos de Verificación:
+```bash
+# 1. Verificar .env
+grep "API_KEY" .env
+
+# 2. Verificar middleware existe
+grep "authenticateApiKey" src/middlewares/auth.js
+
+# 3. Verificar middleware aplicado
+grep "authenticateApiKey" src/features/news/news.routes.js
+
+# 4. Test con cURL
+curl -X POST http://localhost:3001/api/v1/news/external \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: EbVOmsJC5rVywOGVLQyvkmUBLhBtVASY" \
+  -d '{"titulo":"Test","descripcion":"Test","is_oficial":false}'
+```
+
+---
+
+## 📝 Formato de Reporte
+
+Cuando compartas con tu desarrollador, incluye:
+
+```
+🔴 DIAGNÓSTICO HTTP 401
+
+📊 Resultados de Tests:
+- Health Check: [OK/FAIL]
+- API Key Test: [HTTP CODE]
+- Variables de Entorno: [OK/FAIL]
+
+📋 Checklist:
+- [ ] .env configurado
+- [ ] Middleware existe
+- [ ] Middleware aplicado
+- [ ] Servidor reiniciado
+
+💻 Código que debe existir:
+[Incluye el código del middleware]
+
+🔧 Pasos realizados:
+1. ...
+2. ...
+3. ...
+```
+
+---
+
+## 🎯 Próximos Pasos
+
+1. **Ejecuta el diagnóstico interactivo:**
+   ```
+   http://localhost/diagnostico-http-401-completo.php
+   ```
+
+2. **Comparte resultados con tu desarrollador**
+
+3. **Una vez corregido, verifica:**
+   - ✅ cURL devuelve HTTP 201
+   - ✅ WordPress plugin funciona
+   - ✅ Publicaciones se sincronizan
+
+---
+
+## 💡 Consejos para Debugging
+
+### Logs del Servidor:
+```bash
+# Ver logs en tiempo real
+npm run dev
+# Busca líneas con "API Key" o "401"
+```
+
+### Verificar Headers:
+```javascript
+// En WordPress, añade debug:
+error_log('Headers enviados: ' . print_r($headers, true));
+error_log('Respuesta: ' . print_r($response, true));
+```
+
+### Test Manual:
+```php
+// En WordPress functions.php temporal
+add_action('init', function() {
+    if (isset($_GET['test_api'])) {
+        // Código de test aquí
+        die();
+    }
+});
+// Visita: http://tu-wordpress.com/?test_api=1
+```
+
+---
+
+*Generado automáticamente - CdelU Diagnostic Tool*
+*Fecha: Marzo 2026*

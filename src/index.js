@@ -4,6 +4,7 @@ const config = require('./config/default');
 const { scheduleRSSImport } = require('./services/rssService');
 const pool = require('./config/database');
 const LotteryAdWorker = require('./workers/lotteryAdWorker');
+const BackupService = require('./services/backup.service');
 
 // Cargar variables de entorno
 dotenv.config();
@@ -131,6 +132,10 @@ const start = async () => {
         const lotteryAdWorker = new LotteryAdWorker();
         lotteryAdWorker.startAutoMode(5); // Ejecutar cada 5 minutos
         console.log('🎰 Worker de anuncios de lotería iniciado (cada 5 minutos)');
+
+        // Inicializar servicio de backup
+        await BackupService.init();
+        console.log('💾 Servicio de backup inicializado');
       } else {
         console.log('🎰 Worker de anuncios de lotería deshabilitado (BD no conectada)');
       }

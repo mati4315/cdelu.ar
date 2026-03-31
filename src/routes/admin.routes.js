@@ -1,4 +1,5 @@
 const { authenticate, authorize } = require('../middlewares/auth');
+const BackupService = require('../services/backup.service');
 
 async function adminRoutes(fastify, options) {
   // Middleware para verificar si el usuario es administrador
@@ -301,38 +302,18 @@ async function adminRoutes(fastify, options) {
 
   // POST /api/v1/admin/database/backup - Crear backup de la base de datos
   fastify.post('/api/v1/admin/database/backup', {
-    preHandler: requireAdmin,
-    schema: {
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' },
-            data: {
-              type: 'object',
-              properties: {
-                backup_file: { type: 'string' },
-                backup_size: { type: 'string' },
-                created_at: { type: 'string' }
-              }
-            }
-          }
-        }
-      }
-    }
+    preHandler: requireAdmin
   }, async (request, reply) => {
     try {
-      const backupFile = `backup_${Date.now()}.sql`;
-      const createdAt = new Date().toISOString();
+      const result = await BackupService.runBackup();
       
       reply.send({
         success: true,
         message: 'Backup creado exitosamente',
         data: {
-          backup_file: backupFile,
-          backup_size: '45.2 MB',
-          created_at: createdAt
+          backup_file: result.filename,
+          backup_size: (result.size / 1024 / 1024).toFixed(2) + ' MB',
+          created_at: new Date().toISOString()
         }
       });
     } catch (error) {
@@ -340,8 +321,50 @@ async function adminRoutes(fastify, options) {
       reply.code(500).send({
         success: false,
         error: 'Error interno del servidor',
-        message: 'No se pudo crear el backup'
+        message: 'No se pudo crear el backup: ' + error.message
       });
+    }
+  });
+
+  // GET /api/v1/admin/database/backup-settings - Obtener configuración de backup
+  fastify.get('/api/v1/admin/database/backup-settings', {
+    preHandler: requireAdmin
+  }, async (request, reply) => {
+    try {
+      const status = await BackupService.getStatus();
+      reply.send({
+        success: true,
+        data: status
+      });
+    } catch (error) {
+      console.error('Error fetching backup settings:', error);
+      reply.code(500).send({ success: false, message: 'Error al obtener configuración de backup' });
+    }
+  });
+
+  // PUT /api/v1/admin/database/backup-settings - Actualizar configuración de backup
+  fastify.put('/api/v1/admin/database/backup-settings', {
+    preHandler: requireAdmin
+  }, async (request, reply) => {
+    try {
+      const { enabled } = request.body;
+      if (typeof enabled !== 'boolean') {
+        return reply.code(400).send({ success: false, message: 'Parámetro "enabled" requerido' });
+      }
+
+      if (enabled) {
+        BackupService.startScheduler();
+      } else {
+        BackupService.stopScheduler();
+      }
+
+      reply.send({
+        success: true,
+        message: `Respaldo automático ${enabled ? 'activado' : 'desactivado'}`
+      });
+    } catch (error) {
+      console.error('Error updating backup settings:', error);
+      reply.code(500).send({ success: false, message: 'Error al actualizar configuración de backup' });
     }
   });
 

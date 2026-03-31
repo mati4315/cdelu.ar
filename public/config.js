@@ -3,12 +3,12 @@
     window.__env = window.__env || {};
     
     // Detectar si estamos en producción o desarrollo
-    const isProduction = window.location.hostname === 'diario.trigamer.xyz' || 
-                        window.location.hostname === 'www.diario.trigamer.xyz';
+    const isProduction = window.location.hostname === 'cdelu.ar' || 
+                        window.location.hostname === 'www.cdelu.ar';
     
     // URL base de la API
     if (isProduction) {
-        window.__env.API_BASE_URL = 'https://diario.trigamer.xyz/api/v1';
+        window.__env.API_BASE_URL = 'https://api.cdelu.ar/api/v1';
     } else {
         window.__env.API_BASE_URL = window.location.origin + '/api/v1';
     }

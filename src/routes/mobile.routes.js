@@ -47,7 +47,7 @@ async function mobileRoutes(fastify, options) {
     return {
       api_version: '1.0.0',
       server_url: process.env.NODE_ENV === 'production' 
-        ? 'https://diario.trigamer.xyz' 
+        ? 'https://api.cdelu.ar' 
         : 'http://localhost:3001',
       features: {
         feed_enabled: true,
